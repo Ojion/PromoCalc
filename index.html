@@ -79,7 +79,7 @@
             <div class="lg:col-span-2 flex flex-col gap-6">
                 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-black dark:text-white">Configuration</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Configuration</h2>
                     <div class="space-y-2">
                         <div class="grid grid-cols-3 gap-4">
                             <label for="startDate" class="block text-sm font-medium" style="color: var(--text-secondary);">Start Date</label>
@@ -95,7 +95,7 @@
                 </div>
 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-black dark:text-white">Standard Balances</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Standard Balances</h2>
                     <div id="standard-balances-container" class="space-y-3"></div>
                     <button id="add-standard-btn" class="w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
                         <i data-lucide="plus-circle" class="w-5 h-5"></i> Add Balance
@@ -103,7 +103,7 @@
                 </div>
 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-black dark:text-white">Promotional Balances</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Promotional Balances</h2>
                     <div id="promo-balances-container" class="space-y-3"></div>
                     <button id="add-promo-btn" class="w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
                         <i data-lucide="plus-circle" class="w-5 h-5"></i> Add Promo
@@ -111,7 +111,7 @@
                 </div>
 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-black dark:text-white">Existing Savings</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Existing Savings</h2>
                     <label for="existingSavings" class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Amount currently saved</label>
                     <input type="text" id="existingSavings" class="form-input" placeholder="0.00">
                 </div>
@@ -128,7 +128,7 @@
                  <div class="card p-6 sticky top-8">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                         <div>
-                            <h2 class="text-2xl font-bold text-black dark:text-white">Your Payoff Plan</h2>
+                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Your Payoff Plan</h2>
                             <p id="plan-duration" style="color: var(--text-secondary);"></p>
                         </div>
                         <button id="download-csv-btn" class="py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
@@ -285,15 +285,18 @@
             const getNumericValue = (str) => parseFloat(String(str).replace(/,/g, '')) || 0;
 
             const calculatePlan = () => {
-                const parseRow = (row, type) => ({
-                    balance: getNumericValue(row.querySelector('[data-field="balance"]').value),
-                    detail: type === 'standard' ? getNumericValue(row.querySelector('[data-field="detail"]').value) / 100 : row.querySelector('[data-field="detail"]').value
-                });
-
-                const standardBalances = Array.from(docElements.standardContainer.querySelectorAll('.dynamic-row')).map(r => parseRow(r, 'standard')).filter(b => b.balance > 0);
-                const promoBalances = Array.from(docElements.promoContainer.querySelectorAll('.dynamic-row')).map(r => parseRow(r, 'promo')).filter(p => p.balance > 0 && p.detail);
+                // 1. GATHER AND PARSE DATA
+                const standardBalances = Array.from(docElements.standardContainer.querySelectorAll('.dynamic-row'))
+                    .map(r => ({ balance: getNumericValue(r.querySelector('[data-field="balance"]').value), apr: getNumericValue(r.querySelector('[data-field="detail"]').value) / 100 }))
+                    .filter(b => b.balance > 0);
                 
+                let promoBalances = Array.from(docElements.promoContainer.querySelectorAll('.dynamic-row'))
+                    .map(r => ({ balance: getNumericValue(r.querySelector('[data-field="balance"]').value), expires: r.querySelector('[data-field="detail"]').value }))
+                    .filter(p => p.balance > 0 && p.expires);
+
                 if (promoBalances.length === 0) { alert('At least one promotional balance is required.'); return; }
+                
+                promoBalances.sort((a, b) => new Date(a.expires) - new Date(b.expires));
 
                 const existingSavings = getNumericValue(docElements.existingSavings.value);
                 const paymentDay = parseInt(docElements.paymentDay.value);
@@ -303,49 +306,82 @@
                 let firstPaymentDate = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), paymentDay));
                 if (startDate.getUTCDate() >= paymentDay) firstPaymentDate.setUTCMonth(firstPaymentDate.getUTCMonth() + 1);
 
-                const latestExpiration = new Date(Math.max(...promoBalances.map(p => new Date(p.detail + "T12:00:00Z"))));
-                const finalPayoffTarget = new Date(latestExpiration);
-                finalPayoffTarget.setUTCDate(finalPayoffTarget.getUTCDate() - 30);
-                
-                let numMonths = (finalPayoffTarget.getUTCFullYear() - firstPaymentDate.getUTCFullYear()) * 12 + finalPayoffTarget.getUTCMonth() - firstPaymentDate.getUTCMonth() + 1;
-                if (numMonths <= 0) { alert("Promotion expires too soon. Check dates."); return; }
-
-                const totalPromoBalance = promoBalances.reduce((s, p) => s + p.balance, 0);
-                const currentStandardBalance = standardBalances.reduce((s, b) => s + b.balance, 0);
-                const weightedAPR = currentStandardBalance > 0 ? standardBalances.reduce((s, b) => s + b.balance * b.detail, 0) / currentStandardBalance : 0;
+                // 2. DETERMINE THE HIGHEST REQUIRED PAYMENT RATE
+                let highestRequiredPayment = 0;
+                let cumulativePromoToSave = 0;
+                const totalPromoBalanceAll = promoBalances.reduce((sum, p) => sum + p.balance, 0);
+                const currentStandardBalance = standardBalances.reduce((sum, b) => sum + b.balance, 0);
+                const weightedAPR = currentStandardBalance > 0 ? standardBalances.reduce((sum, b) => sum + b.balance * b.apr, 0) / currentStandardBalance : 0;
                 const monthlyAPR = weightedAPR / 12;
 
-                let totalMinPaymentsDue = 0, simulationData = [], balTracker = currentStandardBalance;
-                for (let i = 0; i < numMonths; i++) {
-                    const interest = balTracker > 0 ? balTracker * monthlyAPR : 0;
-                    const minPayment = (balTracker + interest + totalPromoBalance) * minPaymentRate;
-                    const principal = minPayment - interest;
-                    simulationData.push({ minPayment, interest, principal, startBalance: balTracker });
-                    totalMinPaymentsDue += minPayment;
-                    balTracker -= principal;
-                }
+                for (const promo of promoBalances) {
+                    cumulativePromoToSave += promo.balance;
+                    
+                    const expirationDate = new Date(promo.expires + "T12:00:00Z");
+                    let payoffTarget = new Date(Date.UTC(expirationDate.getUTCFullYear(), expirationDate.getUTCMonth(), paymentDay));
+                    if (payoffTarget > expirationDate) {
+                        payoffTarget.setUTCMonth(payoffTarget.getUTCMonth() - 1);
+                    }
 
-                const totalToSave = totalPromoBalance - existingSavings;
-                const grandTotalNeeded = totalMinPaymentsDue + totalToSave;
-                const flatMonthlyPayment = grandTotalNeeded / numMonths;
+                    let monthsForThisPromo = (payoffTarget.getUTCFullYear() - firstPaymentDate.getUTCFullYear()) * 12 + payoffTarget.getUTCMonth() - firstPaymentDate.getUTCMonth() + 1;
+                    if (monthsForThisPromo <= 0) {
+                         alert(`Promotion expiring on ${promo.expires} is too soon to create a plan.`);
+                         return;
+                    }
+                    
+                    let totalMinPaymentsForThisPeriod = 0;
+                    let balTracker = currentStandardBalance;
+                    for (let i = 0; i < monthsForThisPromo; i++) {
+                        const interest = balTracker > 0 ? balTracker * monthlyAPR : 0;
+                        const minPayment = (balTracker + interest + totalPromoBalanceAll) * minPaymentRate;
+                        totalMinPaymentsForThisPeriod += minPayment;
+                        balTracker -= (minPayment - interest);
+                    }
+                    
+                    const grandTotalNeeded = totalMinPaymentsForThisPeriod + cumulativePromoToSave - existingSavings;
+                    const requiredPaymentForThisPromo = grandTotalNeeded / monthsForThisPromo;
+                    
+                    if (requiredPaymentForThisPromo > highestRequiredPayment) {
+                        highestRequiredPayment = requiredPaymentForThisPromo;
+                    }
+                }
+                
+                const flatMonthlyPayment = highestRequiredPayment;
+
+                // 3. GENERATE FINAL SCHEDULE
+                const finalPromo = promoBalances[promoBalances.length - 1];
+                const finalExpiration = new Date(finalPromo.expires + "T12:00:00Z");
+                let finalPayoffTarget = new Date(Date.UTC(finalExpiration.getUTCFullYear(), finalExpiration.getUTCMonth(), paymentDay));
+                 if (finalPayoffTarget > finalExpiration) {
+                        finalPayoffTarget.setUTCMonth(finalPayoffTarget.getUTCMonth() - 1);
+                    }
+                const numMonths = (finalPayoffTarget.getUTCFullYear() - firstPaymentDate.getUTCFullYear()) * 12 + finalPayoffTarget.getUTCMonth() - firstPaymentDate.getUTCMonth() + 1;
 
                 calculationResultData = [];
                 let cumulativeSavings = 0;
+                let balTracker = currentStandardBalance;
+
                 for (let i = 0; i < numMonths; i++) {
-                    const simRow = simulationData[i];
+                    const interest = balTracker > 0 ? balTracker * monthlyAPR : 0;
+                    const minPayment = (balTracker + interest + totalPromoBalanceAll) * minPaymentRate;
+                    const principal = minPayment - interest;
+                    const savings = flatMonthlyPayment - minPayment;
+                    cumulativeSavings += savings;
+
                     const pDate = new Date(firstPaymentDate);
                     pDate.setUTCMonth(pDate.getUTCMonth() + i);
-                    const savings = flatMonthlyPayment - simRow.minPayment;
-                    cumulativeSavings += savings;
+
                     calculationResultData.push({
                         Month: pDate.toLocaleDateString('en-CA'),
-                        Minimum_Payment: simRow.minPayment.toFixed(2),
-                        Interest_Paid: simRow.interest.toFixed(2),
-                        Principal_Paid: simRow.principal.toFixed(2),
+                        Minimum_Payment: minPayment.toFixed(2),
+                        Interest_Paid: interest.toFixed(2),
+                        Principal_Paid: principal.toFixed(2),
                         Savings_Contribution: savings.toFixed(2),
                         Cumulative_Savings: cumulativeSavings.toFixed(2),
-                        Ending_Standard_Balance: (simRow.startBalance - simRow.principal).toFixed(2),
+                        Ending_Standard_Balance: (balTracker - principal).toFixed(2),
                     });
+
+                    balTracker -= principal;
                 }
                 displayResults(flatMonthlyPayment, numMonths);
             };
