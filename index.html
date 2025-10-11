@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promo Payoff Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Blueprint-driven CSS from scratch */
+        :root {
+            --bg: #F9FAFB;
+            --bg-card: #FFFFFF;
+            --text-primary: #111827;
+            --text-secondary: #4B5563; 
+            --border: #E5E7EB;
+            --input-bg: #F3F4F6;
+        }
+
+        html.dark {
+            --bg: #111827;
+            --bg-card: #1F2937;
+            --text-primary: #F9FAFB;
+            --text-secondary: #9CA3AF;
+            --border: #374151;
+            --input-bg: #374151;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            @apply rounded-2xl shadow-sm;
+        }
+
+        .form-input {
+            background-color: var(--input-bg);
+            border-color: var(--border);
+            color: var(--text-primary);
+            @apply w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200;
+        }
+        
+        .form-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .calculate-card {
+            @apply p-0 cursor-pointer hover:border-indigo-400/50 transition-colors duration-300;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans">
+    
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-3">
+                 <i data-lucide="piggy-bank" class="w-10 h-10 text-indigo-500"></i>
+                <h1 class="text-3xl font-bold">
+                    <span class="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                        Promo Payoff Calculator
+                    </span>
+                </h1>
+            </div>
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i data-lucide="sun" id="sun-icon" class="hidden"></i>
+                <i data-lucide="moon" id="moon-icon" class="hidden"></i>
+            </button>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- Input Form Section -->
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-black dark:text-white">Configuration</h2>
+                    <div class="space-y-2">
+                        <div class="grid grid-cols-3 gap-4">
+                            <label for="startDate" class="block text-sm font-medium" style="color: var(--text-secondary);">Start Date</label>
+                            <label for="paymentDay" class="block text-sm font-medium" style="color: var(--text-secondary);">Payment Day</label>
+                            <label for="minPaymentRate" class="block text-sm font-medium" style="color: var(--text-secondary);">Min. %</label>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <input type="date" id="startDate" class="form-input">
+                            <input type="number" id="paymentDay" class="form-input" value="15" min="1" max="28">
+                            <input type="number" id="minPaymentRate" class="form-input" value="4" step="0.01">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-black dark:text-white">Standard Balances</h2>
+                    <div id="standard-balances-container" class="space-y-3"></div>
+                    <button id="add-standard-btn" class="w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
+                        <i data-lucide="plus-circle" class="w-5 h-5"></i> Add Balance
+                    </button>
+                </div>
+
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-black dark:text-white">Promotional Balances</h2>
+                    <div id="promo-balances-container" class="space-y-3"></div>
+                    <button id="add-promo-btn" class="w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
+                        <i data-lucide="plus-circle" class="w-5 h-5"></i> Add Promo
+                    </button>
+                </div>
+
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-black dark:text-white">Existing Savings</h2>
+                    <label for="existingSavings" class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Amount currently saved</label>
+                    <input type="text" id="existingSavings" class="form-input" placeholder="0.00">
+                </div>
+
+                <button id="calculate-btn" class="card calculate-card p-4">
+                    <span class="text-3xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                        Calculate Plan
+                    </span>
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="lg:col-span-3 hidden">
+                 <div class="card p-6 sticky top-8">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-black dark:text-white">Your Payoff Plan</h2>
+                            <p id="plan-duration" style="color: var(--text-secondary);"></p>
+                        </div>
+                        <button id="download-csv-btn" class="py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
+                            <i data-lucide="download"></i> Download CSV
+                        </button>
+                    </div>
+
+                    <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-6 text-center mb-6">
+                        <p class="text-lg text-indigo-800 dark:text-indigo-200">Flat Monthly Payment</p>
+                        <p id="flat-payment-result" class="text-5xl font-bold text-indigo-600 dark:text-indigo-400"></p>
+                    </div>
+
+                    <div class="overflow-auto max-h-[60vh] rounded-lg border" style="border-color: var(--border);">
+                        <table class="w-full text-left text-sm">
+                            <thead class="sticky top-0" style="background-color: var(--input-bg);">
+                                <tr>
+                                    <th class="p-3">Month</th>
+                                    <th class="p-3 text-right">Min. Payment</th>
+                                    <th class="p-3 text-right">Interest</th>
+                                    <th class="p-3 text-right">Principal</th>
+                                    <th class="p-3 text-right">Savings</th>
+                                    <th class="p-3 text-right">Total Saved</th>
+                                    <th class="p-3 text-right">End Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+
+            // --- THEME MANAGEMENT ---
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const sunIcon = document.getElementById('sun-icon');
+            const moonIcon = document.getElementById('moon-icon');
+            const applyTheme = (theme) => {
+                document.documentElement.className = theme;
+                sunIcon.style.display = theme === 'dark' ? 'block' : 'none';
+                moonIcon.style.display = theme === 'light' ? 'block' : 'none';
+            };
+            const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            applyTheme(savedTheme);
+            themeToggleBtn.addEventListener('click', () => {
+                const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+                localStorage.setItem('theme', newTheme);
+                applyTheme(newTheme);
+            });
+
+            // --- DOM ELEMENTS ---
+            const docElements = {
+                startDate: document.getElementById('startDate'),
+                paymentDay: document.getElementById('paymentDay'),
+                minPaymentRate: document.getElementById('minPaymentRate'),
+                standardContainer: document.getElementById('standard-balances-container'),
+                promoContainer: document.getElementById('promo-balances-container'),
+                addStandardBtn: document.getElementById('add-standard-btn'),
+                addPromoBtn: document.getElementById('add-promo-btn'),
+                existingSavings: document.getElementById('existingSavings'),
+                calculateBtn: document.getElementById('calculate-btn'),
+                resultsSection: document.getElementById('results-section'),
+                planDuration: document.getElementById('plan-duration'),
+                flatPaymentResult: document.getElementById('flat-payment-result'),
+                resultsTableBody: document.getElementById('results-table-body'),
+                downloadCsvBtn: document.getElementById('download-csv-btn')
+            };
+            let calculationResultData = [];
+
+            // --- INPUT FORMATTING ---
+            const formatNumberInput = (e) => {
+                let input = e.target;
+                let value = input.value.replace(/[^0-9.]/g, '');
+                let parts = value.split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                if (parts.length > 1) {
+                    parts[1] = parts[1].substring(0, 2);
+                }
+                input.value = parts.join('.');
+            };
+
+            // --- DYNAMIC ROW LOGIC ---
+            const createRow = (container, type) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2 dynamic-row';
+                row.innerHTML = `
+                    <div class="grid grid-cols-5 gap-2 flex-1">
+                        <input type="text" class="form-input col-span-3" placeholder="Balance ($)" data-field="balance" inputmode="decimal">
+                        <input type="${type === 'standard' ? 'number' : 'date'}" step="0.01" class="form-input col-span-2" placeholder="${type === 'standard' ? 'APR (%)' : ''}" data-field="detail">
+                    </div>
+                    <button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 remove-row-btn">
+                        <i data-lucide="minus-circle" class="w-5 h-5 text-gray-500"></i>
+                    </button>
+                `;
+                container.appendChild(row);
+                row.querySelector('[data-field="balance"]').addEventListener('input', formatNumberInput);
+                lucide.createIcons();
+                updateRemoveButtons();
+            };
+
+            const updateRemoveButtons = () => {
+                [docElements.standardContainer, docElements.promoContainer].forEach(container => {
+                    const rows = container.querySelectorAll('.dynamic-row');
+                    rows.forEach((row, index) => {
+                        row.querySelector('.remove-row-btn').style.display = rows.length > 1 ? 'flex' : 'none';
+                    });
+                });
+            };
+
+            // --- DATA PERSISTENCE ---
+            const saveData = () => {
+                const getRowData = (c) => Array.from(c.querySelectorAll('.dynamic-row')).map(r => ({ balance: r.querySelector('[data-field="balance"]').value, detail: r.querySelector('[data-field="detail"]').value }));
+                const data = {
+                    startDate: docElements.startDate.value, paymentDay: docElements.paymentDay.value,
+                    minPaymentRate: docElements.minPaymentRate.value, existingSavings: docElements.existingSavings.value,
+                    standardBalances: getRowData(docElements.standardContainer),
+                    promoBalances: getRowData(docElements.promoContainer)
+                };
+                localStorage.setItem('calculatorData', JSON.stringify(data));
+            };
+
+            const loadData = () => {
+                const data = JSON.parse(localStorage.getItem('calculatorData'));
+                if (!data) {
+                    docElements.startDate.valueAsDate = new Date();
+                    createRow(docElements.standardContainer, 'standard');
+                    createRow(docElements.promoContainer, 'promo');
+                    return;
+                }
+                docElements.startDate.value = data.startDate || new Date().toISOString().split('T')[0];
+                docElements.paymentDay.value = data.paymentDay || 15;
+                docElements.minPaymentRate.value = data.minPaymentRate || 4;
+                docElements.existingSavings.value = data.existingSavings || '';
+
+                const loadRows = (container, type, items) => {
+                    container.innerHTML = '';
+                    (items && items.length > 0 ? items : [{balance: '', detail: ''}]).forEach(item => {
+                        createRow(container, type);
+                        const lastRow = container.lastElementChild;
+                        lastRow.querySelector('[data-field="balance"]').value = item.balance;
+                        lastRow.querySelector('[data-field="detail"]').value = item.detail;
+                    });
+                };
+                loadRows(docElements.standardContainer, 'standard', data.standardBalances);
+                loadRows(docElements.promoContainer, 'promo', data.promoBalances);
+                updateRemoveButtons();
+            };
+            
+            // --- CORE CALCULATION ENGINE ---
+            const getNumericValue = (str) => parseFloat(String(str).replace(/,/g, '')) || 0;
+
+            const calculatePlan = () => {
+                const parseRow = (row, type) => ({
+                    balance: getNumericValue(row.querySelector('[data-field="balance"]').value),
+                    detail: type === 'standard' ? getNumericValue(row.querySelector('[data-field="detail"]').value) / 100 : row.querySelector('[data-field="detail"]').value
+                });
+
+                const standardBalances = Array.from(docElements.standardContainer.querySelectorAll('.dynamic-row')).map(r => parseRow(r, 'standard')).filter(b => b.balance > 0);
+                const promoBalances = Array.from(docElements.promoContainer.querySelectorAll('.dynamic-row')).map(r => parseRow(r, 'promo')).filter(p => p.balance > 0 && p.detail);
+                
+                if (promoBalances.length === 0) { alert('At least one promotional balance is required.'); return; }
+
+                const existingSavings = getNumericValue(docElements.existingSavings.value);
+                const paymentDay = parseInt(docElements.paymentDay.value);
+                const minPaymentRate = getNumericValue(docElements.minPaymentRate.value) / 100 || 0.04;
+                
+                const startDate = new Date(docElements.startDate.value + "T12:00:00Z");
+                let firstPaymentDate = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), paymentDay));
+                if (startDate.getUTCDate() >= paymentDay) firstPaymentDate.setUTCMonth(firstPaymentDate.getUTCMonth() + 1);
+
+                const latestExpiration = new Date(Math.max(...promoBalances.map(p => new Date(p.detail + "T12:00:00Z"))));
+                const finalPayoffTarget = new Date(latestExpiration);
+                finalPayoffTarget.setUTCDate(finalPayoffTarget.getUTCDate() - 30);
+                
+                let numMonths = (finalPayoffTarget.getUTCFullYear() - firstPaymentDate.getUTCFullYear()) * 12 + finalPayoffTarget.getUTCMonth() - firstPaymentDate.getUTCMonth() + 1;
+                if (numMonths <= 0) { alert("Promotion expires too soon. Check dates."); return; }
+
+                const totalPromoBalance = promoBalances.reduce((s, p) => s + p.balance, 0);
+                const currentStandardBalance = standardBalances.reduce((s, b) => s + b.balance, 0);
+                const weightedAPR = currentStandardBalance > 0 ? standardBalances.reduce((s, b) => s + b.balance * b.detail, 0) / currentStandardBalance : 0;
+                const monthlyAPR = weightedAPR / 12;
+
+                let totalMinPaymentsDue = 0, simulationData = [], balTracker = currentStandardBalance;
+                for (let i = 0; i < numMonths; i++) {
+                    const interest = balTracker > 0 ? balTracker * monthlyAPR : 0;
+                    const minPayment = (balTracker + interest + totalPromoBalance) * minPaymentRate;
+                    const principal = minPayment - interest;
+                    simulationData.push({ minPayment, interest, principal, startBalance: balTracker });
+                    totalMinPaymentsDue += minPayment;
+                    balTracker -= principal;
+                }
+
+                const totalToSave = totalPromoBalance - existingSavings;
+                const grandTotalNeeded = totalMinPaymentsDue + totalToSave;
+                const flatMonthlyPayment = grandTotalNeeded / numMonths;
+
+                calculationResultData = [];
+                let cumulativeSavings = 0;
+                for (let i = 0; i < numMonths; i++) {
+                    const simRow = simulationData[i];
+                    const pDate = new Date(firstPaymentDate);
+                    pDate.setUTCMonth(pDate.getUTCMonth() + i);
+                    const savings = flatMonthlyPayment - simRow.minPayment;
+                    cumulativeSavings += savings;
+                    calculationResultData.push({
+                        Month: pDate.toLocaleDateString('en-CA'),
+                        Minimum_Payment: simRow.minPayment.toFixed(2),
+                        Interest_Paid: simRow.interest.toFixed(2),
+                        Principal_Paid: simRow.principal.toFixed(2),
+                        Savings_Contribution: savings.toFixed(2),
+                        Cumulative_Savings: cumulativeSavings.toFixed(2),
+                        Ending_Standard_Balance: (simRow.startBalance - simRow.principal).toFixed(2),
+                    });
+                }
+                displayResults(flatMonthlyPayment, numMonths);
+            };
+
+            // --- DISPLAY & EXPORT ---
+            const displayResults = (flatPayment, duration) => {
+                docElements.planDuration.textContent = `${duration}-Month Payoff Plan`;
+                docElements.flatPaymentResult.textContent = `$${(new Intl.NumberFormat().format(flatPayment.toFixed(2)))}`;
+                docElements.resultsTableBody.innerHTML = calculationResultData.map(row => `
+                    <tr class="border-b" style="border-color: var(--border);">
+                        <td class="p-3">${row.Month}</td>
+                        <td class="p-3 text-right">$${row.Minimum_Payment}</td>
+                        <td class="p-3 text-right text-red-500">$${row.Interest_Paid}</td>
+                        <td class="p-3 text-right text-green-500">$${row.Principal_Paid}</td>
+                        <td class="p-3 text-right">$${row.Savings_Contribution}</td>
+                        <td class="p-3 text-right font-semibold">$${row.Cumulative_Savings}</td>
+                        <td class="p-3 text-right">$${row.Ending_Standard_Balance}</td>
+                    </tr>
+                `).join('');
+                docElements.resultsSection.classList.remove('hidden');
+                docElements.resultsSection.scrollIntoView({ behavior: 'smooth' });
+            };
+            
+            const downloadCSV = () => {
+                if(calculationResultData.length === 0) return;
+                const headers = Object.keys(calculationResultData[0]);
+                const csv = [headers.join(','), ...calculationResultData.map(r => headers.map(h => r[h]).join(','))].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'payoff_schedule.csv';
+                link.click();
+                URL.revokeObjectURL(link.href);
+            };
+            
+            // --- EVENT BINDING ---
+            docElements.addStandardBtn.addEventListener('click', () => createRow(docElements.standardContainer, 'standard'));
+            docElements.addPromoBtn.addEventListener('click', () => createRow(docElements.promoContainer, 'promo'));
+            docElements.existingSavings.addEventListener('input', formatNumberInput);
+            document.querySelector('main').addEventListener('click', e => {
+                if (e.target.closest('.remove-row-btn')) {
+                    e.target.closest('.dynamic-row').remove();
+                    updateRemoveButtons();
+                    saveData();
+                }
+            });
+            document.querySelector('main').addEventListener('input', saveData);
+            docElements.calculateBtn.addEventListener('click', calculatePlan);
+            docElements.downloadCsvBtn.addEventListener('click', downloadCSV);
+
+            // --- INITIALIZATION ---
+            loadData();
+        });
+    </script>
+</body>
+</html>
+
