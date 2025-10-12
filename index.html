@@ -79,7 +79,7 @@
             <div class="lg:col-span-2 flex flex-col gap-6">
                 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Configuration</h2>
+                    <h2 class="text-xl font-semibold mb-4">Configuration</h2>
                     <div class="space-y-2">
                         <div class="grid grid-cols-3 gap-4">
                             <label for="startDate" class="block text-sm font-medium" style="color: var(--text-secondary);">Start Date</label>
@@ -95,7 +95,7 @@
                 </div>
 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Standard Balances</h2>
+                    <h2 class="text-xl font-semibold mb-4">Standard Balances</h2>
                     <div id="standard-balances-container" class="space-y-3"></div>
                     <button id="add-standard-btn" class="w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
                         <i data-lucide="plus-circle" class="w-5 h-5"></i> Add Balance
@@ -103,7 +103,7 @@
                 </div>
 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Promotional Balances</h2>
+                    <h2 class="text-xl font-semibold mb-4">Promotional Balances</h2>
                     <div id="promo-balances-container" class="space-y-3"></div>
                     <button id="add-promo-btn" class="w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
                         <i data-lucide="plus-circle" class="w-5 h-5"></i> Add Promo
@@ -111,7 +111,7 @@
                 </div>
 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Existing Savings</h2>
+                    <h2 class="text-xl font-semibold mb-4">Existing Savings</h2>
                     <label for="existingSavings" class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Amount currently saved</label>
                     <input type="text" id="existingSavings" class="form-input" placeholder="0.00">
                 </div>
@@ -128,7 +128,7 @@
                  <div class="card p-6 sticky top-8">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                         <div>
-                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Your Payoff Plan</h2>
+                            <h2 class="text-2xl font-bold ">Your Payoff Plan</h2>
                             <p id="plan-duration" style="color: var(--text-secondary);"></p>
                         </div>
                         <button id="download-csv-btn" class="py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
@@ -137,8 +137,8 @@
                     </div>
 
                     <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-6 text-center mb-6">
-                        <p class="text-lg text-indigo-800 dark:text-indigo-200">Flat Monthly Payment</p>
-                        <p id="flat-payment-result" class="text-5xl font-bold text-indigo-600 dark:text-indigo-400"></p>
+                        <p class="text-lg text-indigo-400">Flat Monthly Payment</p>
+                        <p id="flat-payment-result" class="text-5xl font-bold text-indigo-700 dark:text-indigo-400"></p>
                     </div>
 
                     <div class="overflow-auto max-h-[60vh] rounded-lg border" style="border-color: var(--border);">
