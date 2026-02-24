@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Blueprint-driven CSS from scratch */
         :root {
             --bg: #F9FAFB;
             --bg-card: #FFFFFF;
@@ -58,7 +57,6 @@
 <body class="min-h-screen font-sans">
     
     <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
         <header class="flex justify-between items-center mb-8">
             <div class="flex items-center gap-3">
                  <i data-lucide="piggy-bank" class="w-10 h-10 text-indigo-500"></i>
@@ -75,7 +73,6 @@
         </header>
 
         <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            <!-- Input Form Section -->
             <div class="lg:col-span-2 flex flex-col gap-6">
                 
                 <div class="card p-6">
@@ -123,7 +120,6 @@
                 </button>
             </div>
 
-            <!-- Results Section -->
             <div id="results-section" class="lg:col-span-3 hidden">
                  <div class="card p-6 sticky top-8">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
@@ -136,22 +132,27 @@
                         </button>
                     </div>
 
-                    <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-6 text-center mb-6">
-                        <p class="text-lg text-indigo-400">Flat Monthly Payment</p>
-                        <p id="flat-payment-result" class="text-5xl font-bold text-indigo-700 dark:text-indigo-400"></p>
+                    <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-6 text-center mb-6 flex justify-around">
+                        <div>
+                            <p class="text-sm text-indigo-400">Current Target Payment</p>
+                            <p id="flat-payment-result" class="text-4xl font-bold text-indigo-700 dark:text-indigo-400"></p>
+                        </div>
                     </div>
 
                     <div class="overflow-auto max-h-[60vh] rounded-lg border" style="border-color: var(--border);">
-                        <table class="w-full text-left text-sm">
-                            <thead class="sticky top-0" style="background-color: var(--input-bg);">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="sticky top-0 z-10" style="background-color: var(--input-bg);">
                                 <tr>
                                     <th class="p-3">Month</th>
-                                    <th class="p-3 text-right">Min. Payment</th>
+                                    <th class="p-3 text-right">Target Payment</th>
+                                    <th class="p-3 text-right">Min Pmt</th>
                                     <th class="p-3 text-right">Interest</th>
-                                    <th class="p-3 text-right">Principal</th>
-                                    <th class="p-3 text-right">Savings</th>
+                                    <th class="p-3 text-right">Std Principal</th>
+                                    <th class="p-3 text-right">Saved</th>
                                     <th class="p-3 text-right">Total Saved</th>
-                                    <th class="p-3 text-right">End Balance</th>
+                                    <th class="p-3 text-right">Std Bal</th>
+                                    <th class="p-3 text-right">Promo Bal</th>
+                                    <th class="p-3 text-center">Notes</th>
                                 </tr>
                             </thead>
                             <tbody id="results-table-body"></tbody>
@@ -166,7 +167,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
 
-            // --- THEME MANAGEMENT ---
             const themeToggleBtn = document.getElementById('theme-toggle');
             const sunIcon = document.getElementById('sun-icon');
             const moonIcon = document.getElementById('moon-icon');
@@ -183,7 +183,6 @@
                 applyTheme(newTheme);
             });
 
-            // --- DOM ELEMENTS ---
             const docElements = {
                 startDate: document.getElementById('startDate'),
                 paymentDay: document.getElementById('paymentDay'),
@@ -202,7 +201,6 @@
             };
             let calculationResultData = [];
 
-            // --- INPUT FORMATTING ---
             const formatNumberInput = (e) => {
                 let input = e.target;
                 let value = input.value.replace(/[^0-9.]/g, '');
@@ -214,7 +212,6 @@
                 input.value = parts.join('.');
             };
 
-            // --- DYNAMIC ROW LOGIC ---
             const createRow = (container, type) => {
                 const row = document.createElement('div');
                 row.className = 'flex items-center gap-2 dynamic-row';
@@ -242,7 +239,6 @@
                 });
             };
 
-            // --- DATA PERSISTENCE ---
             const saveData = () => {
                 const getRowData = (c) => Array.from(c.querySelectorAll('.dynamic-row')).map(r => ({ balance: r.querySelector('[data-field="balance"]').value, detail: r.querySelector('[data-field="detail"]').value }));
                 const data = {
@@ -281,134 +277,245 @@
                 updateRemoveButtons();
             };
             
-            // --- CORE CALCULATION ENGINE ---
             const getNumericValue = (str) => parseFloat(String(str).replace(/,/g, '')) || 0;
 
             const calculatePlan = () => {
-                // 1. GATHER AND PARSE DATA
-                const standardBalances = Array.from(docElements.standardContainer.querySelectorAll('.dynamic-row'))
+                let standardBalances = Array.from(docElements.standardContainer.querySelectorAll('.dynamic-row'))
                     .map(r => ({ balance: getNumericValue(r.querySelector('[data-field="balance"]').value), apr: getNumericValue(r.querySelector('[data-field="detail"]').value) / 100 }))
                     .filter(b => b.balance > 0);
                 
                 let promoBalances = Array.from(docElements.promoContainer.querySelectorAll('.dynamic-row'))
                     .map(r => ({ balance: getNumericValue(r.querySelector('[data-field="balance"]').value), expires: r.querySelector('[data-field="detail"]').value }))
                     .filter(p => p.balance > 0 && p.expires);
-
-                if (promoBalances.length === 0) { alert('At least one promotional balance is required.'); return; }
                 
                 promoBalances.sort((a, b) => new Date(a.expires) - new Date(b.expires));
 
-                const existingSavings = getNumericValue(docElements.existingSavings.value);
+                let existingSavings = getNumericValue(docElements.existingSavings.value);
                 const paymentDay = parseInt(docElements.paymentDay.value);
                 const minPaymentRate = getNumericValue(docElements.minPaymentRate.value) / 100 || 0.04;
                 
                 const startDate = new Date(docElements.startDate.value + "T12:00:00Z");
-                let firstPaymentDate = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), paymentDay));
-                if (startDate.getUTCDate() >= paymentDay) firstPaymentDate.setUTCMonth(firstPaymentDate.getUTCMonth() + 1);
+                let currentDate = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), paymentDay));
+                if (startDate.getUTCDate() >= paymentDay) currentDate.setUTCMonth(currentDate.getUTCMonth() + 1);
 
-                // 2. DETERMINE THE HIGHEST REQUIRED PAYMENT RATE
-                let highestRequiredPayment = 0;
-                let cumulativePromoToSave = 0;
-                const totalPromoBalanceAll = promoBalances.reduce((sum, p) => sum + p.balance, 0);
-                const currentStandardBalance = standardBalances.reduce((sum, b) => sum + b.balance, 0);
-                const weightedAPR = currentStandardBalance > 0 ? standardBalances.reduce((sum, b) => sum + b.balance * b.apr, 0) / currentStandardBalance : 0;
-                const monthlyAPR = weightedAPR / 12;
-
-                for (const promo of promoBalances) {
-                    cumulativePromoToSave += promo.balance;
-                    
-                    const expirationDate = new Date(promo.expires + "T12:00:00Z");
-                    let payoffTarget = new Date(Date.UTC(expirationDate.getUTCFullYear(), expirationDate.getUTCMonth(), paymentDay));
-                    if (payoffTarget > expirationDate) {
-                        payoffTarget.setUTCMonth(payoffTarget.getUTCMonth() - 1);
-                    }
-
-                    let monthsForThisPromo = (payoffTarget.getUTCFullYear() - firstPaymentDate.getUTCFullYear()) * 12 + payoffTarget.getUTCMonth() - firstPaymentDate.getUTCMonth() + 1;
-                    if (monthsForThisPromo <= 0) {
-                         alert(`Promotion expiring on ${promo.expires} is too soon to create a plan.`);
-                         return;
-                    }
-                    
-                    let totalMinPaymentsForThisPeriod = 0;
-                    let balTracker = currentStandardBalance;
-                    for (let i = 0; i < monthsForThisPromo; i++) {
-                        const interest = balTracker > 0 ? balTracker * monthlyAPR : 0;
-                        const minPayment = (balTracker + interest + totalPromoBalanceAll) * minPaymentRate;
-                        totalMinPaymentsForThisPeriod += minPayment;
-                        balTracker -= (minPayment - interest);
-                    }
-                    
-                    const grandTotalNeeded = totalMinPaymentsForThisPeriod + cumulativePromoToSave - existingSavings;
-                    const requiredPaymentForThisPromo = grandTotalNeeded / monthsForThisPromo;
-                    
-                    if (requiredPaymentForThisPromo > highestRequiredPayment) {
-                        highestRequiredPayment = requiredPaymentForThisPromo;
-                    }
-                }
-                
-                const flatMonthlyPayment = highestRequiredPayment;
-
-                // 3. GENERATE FINAL SCHEDULE
-                const finalPromo = promoBalances[promoBalances.length - 1];
-                const finalExpiration = new Date(finalPromo.expires + "T12:00:00Z");
-                let finalPayoffTarget = new Date(Date.UTC(finalExpiration.getUTCFullYear(), finalExpiration.getUTCMonth(), paymentDay));
-                 if (finalPayoffTarget > finalExpiration) {
-                        finalPayoffTarget.setUTCMonth(finalPayoffTarget.getUTCMonth() - 1);
-                    }
-                const numMonths = (finalPayoffTarget.getUTCFullYear() - firstPaymentDate.getUTCFullYear()) * 12 + finalPayoffTarget.getUTCMonth() - firstPaymentDate.getUTCMonth() + 1;
+                let currentStandardBalance = standardBalances.reduce((sum, b) => sum + b.balance, 0);
+                let weightedAPR = currentStandardBalance > 0 ? standardBalances.reduce((sum, b) => sum + b.balance * b.apr, 0) / currentStandardBalance : 0;
+                let monthlyAPR = weightedAPR / 12;
 
                 calculationResultData = [];
-                let cumulativeSavings = 0;
+                let cumulativeSavings = existingSavings;
                 let balTracker = currentStandardBalance;
+                let activePromos = JSON.parse(JSON.stringify(promoBalances));
 
-                for (let i = 0; i < numMonths; i++) {
-                    const interest = balTracker > 0 ? balTracker * monthlyAPR : 0;
-                    const minPayment = (balTracker + interest + totalPromoBalanceAll) * minPaymentRate;
-                    const principal = minPayment - interest;
-                    const savings = flatMonthlyPayment - minPayment;
-                    cumulativeSavings += savings;
+                const getRequiredPayment = (sim_std_start, sim_promos_start, sim_sav_start, sim_date_start) => {
+                    if (sim_promos_start.length === 0 && sim_std_start <= 0.01) return 0;
+                    
+                    let low = 0, high = 100000, best_P = 100000;
+                    for (let iter = 0; iter < 60; iter++) {
+                        let mid = (low + high) / 2;
+                        let sim_std = sim_std_start;
+                        let sim_promos = JSON.parse(JSON.stringify(sim_promos_start));
+                        let sim_sav = sim_sav_start;
+                        let sim_date = new Date(sim_date_start.getTime());
+                        let valid = true;
 
-                    const pDate = new Date(firstPaymentDate);
-                    pDate.setUTCMonth(pDate.getUTCMonth() + i);
+                        while (sim_promos.length > 0) {
+                            let interest = sim_std > 0 ? sim_std * monthlyAPR : 0;
+                            let total_promo = sim_promos.reduce((s, p) => s + p.balance, 0);
+                            let total_bal = sim_std + total_promo;
+                            
+                            if (total_bal <= 0.01) break;
+
+                            let min_pmt = total_bal * minPaymentRate;
+                            if (total_bal < 35) min_pmt = total_bal;
+                            else if (min_pmt < 35) min_pmt = 35;
+
+                            let actual_pmt = Math.max(mid, min_pmt);
+                            let principal = min_pmt - interest;
+                            if (principal > total_bal) principal = total_bal;
+
+                            if (principal <= sim_std) {
+                                sim_std -= principal;
+                            } else {
+                                let excess = principal - sim_std;
+                                sim_std = 0;
+                                for (let i = 0; i < sim_promos.length; i++) {
+                                    if (excess <= 0) break;
+                                    if (sim_promos[i].balance >= excess) {
+                                        sim_promos[i].balance -= excess;
+                                        excess = 0;
+                                    } else {
+                                        excess -= sim_promos[i].balance;
+                                        sim_promos[i].balance = 0;
+                                    }
+                                }
+                            }
+                            sim_sav += (actual_pmt - min_pmt);
+
+                            for (let i = 0; i < sim_promos.length; i++) {
+                                let exp_date = new Date(sim_promos[i].expires + "T12:00:00Z");
+                                let target_date = new Date(Date.UTC(exp_date.getUTCFullYear(), exp_date.getUTCMonth(), paymentDay));
+                                if (target_date > exp_date) target_date.setUTCMonth(target_date.getUTCMonth() - 1);
+                                target_date.setUTCMonth(target_date.getUTCMonth() - 1);
+                                
+                                if (sim_date.getUTCFullYear() > target_date.getUTCFullYear() || 
+                                   (sim_date.getUTCFullYear() === target_date.getUTCFullYear() && sim_date.getUTCMonth() >= target_date.getUTCMonth())) {
+                                    if (sim_sav < sim_promos[i].balance - 0.01) {
+                                        valid = false;
+                                        break;
+                                    }
+                                    sim_sav -= sim_promos[i].balance;
+                                    sim_promos[i].balance = 0;
+                                }
+                            }
+                            
+                            if (!valid) break;
+                            sim_promos = sim_promos.filter(p => p.balance > 0.01);
+                            sim_date.setUTCMonth(sim_date.getUTCMonth() + 1);
+                        }
+
+                        if (valid) {
+                            best_P = mid;
+                            high = mid;
+                        } else {
+                            low = mid;
+                        }
+                    }
+                    return best_P;
+                };
+
+                let current_P = getRequiredPayment(balTracker, activePromos, cumulativeSavings, currentDate);
+                let was_std_bal_zero = (balTracker <= 0.01);
+                let last_promo_count = activePromos.length;
+                let sanityCounter = 0;
+
+                while ((balTracker > 0.01 || activePromos.length > 0) && sanityCounter < 360) {
+                    sanityCounter++;
+                    
+                    let interest = balTracker > 0 ? balTracker * monthlyAPR : 0;
+                    let total_promo = activePromos.reduce((s, p) => s + p.balance, 0);
+                    let total_bal = balTracker + total_promo;
+                    
+                    let min_pmt = total_bal * minPaymentRate;
+                    if (total_bal < 35) min_pmt = total_bal;
+                    else if (min_pmt < 35) min_pmt = 35;
+
+                    let actual_pmt = Math.max(current_P, min_pmt);
+                    
+                    let principal = min_pmt - interest;
+                    if (principal > total_bal) principal = total_bal;
+
+                    let excess_min = 0;
+                    if (principal <= balTracker) {
+                        balTracker -= principal;
+                    } else {
+                        excess_min = principal - balTracker;
+                        balTracker = 0;
+                        for (let i = 0; i < activePromos.length; i++) {
+                            if (excess_min <= 0) break;
+                            if (activePromos[i].balance >= excess_min) {
+                                activePromos[i].balance -= excess_min;
+                                excess_min = 0;
+                            } else {
+                                excess_min -= activePromos[i].balance;
+                                activePromos[i].balance = 0;
+                            }
+                        }
+                    }
+
+                    let savings_contrib = actual_pmt - min_pmt;
+                    cumulativeSavings += savings_contrib;
+
+                    let actionNote = "";
+
+                    for (let i = 0; i < activePromos.length; i++) {
+                        let exp_date = new Date(activePromos[i].expires + "T12:00:00Z");
+                        let target_date = new Date(Date.UTC(exp_date.getUTCFullYear(), exp_date.getUTCMonth(), paymentDay));
+                        if (target_date > exp_date) target_date.setUTCMonth(target_date.getUTCMonth() - 1);
+                        target_date.setUTCMonth(target_date.getUTCMonth() - 1);
+                        
+                        if (currentDate.getUTCFullYear() > target_date.getUTCFullYear() || 
+                           (currentDate.getUTCFullYear() === target_date.getUTCFullYear() && currentDate.getUTCMonth() >= target_date.getUTCMonth())) {
+                            
+                            let amountToPay = activePromos[i].balance;
+                            if (amountToPay > 0.01) {
+                                if (cumulativeSavings >= amountToPay - 0.05) {
+                                    cumulativeSavings -= amountToPay;
+                                    activePromos[i].balance = 0;
+                                    if (actionNote !== "") actionNote += " & ";
+                                    actionNote += `Paid Off Promo ($${amountToPay.toFixed(2)})`;
+                                } else {
+                                    actionNote += `[ERROR] Short $${(amountToPay - cumulativeSavings).toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+
+                    let ending_promo_bal = activePromos.reduce((s, p) => s + p.balance, 0);
+                    cumulativeSavings = Math.max(0, cumulativeSavings);
 
                     calculationResultData.push({
-                        Month: pDate.toLocaleDateString('en-CA'),
-                        Minimum_Payment: minPayment.toFixed(2),
+                        Month: currentDate.toLocaleDateString('en-CA'),
+                        Target_Payment: actual_pmt.toFixed(2),
+                        Minimum_Payment: min_pmt.toFixed(2),
                         Interest_Paid: interest.toFixed(2),
-                        Principal_Paid: principal.toFixed(2),
-                        Savings_Contribution: savings.toFixed(2),
+                        Standard_Principal: (principal - excess_min).toFixed(2),
+                        Savings_Contribution: savings_contrib.toFixed(2),
                         Cumulative_Savings: cumulativeSavings.toFixed(2),
-                        Ending_Standard_Balance: (balTracker - principal).toFixed(2),
+                        Ending_Standard_Balance: balTracker.toFixed(2),
+                        Ending_Promo_Balance: ending_promo_bal.toFixed(2),
+                        Notes: actionNote
                     });
 
-                    balTracker -= principal;
+                    activePromos = activePromos.filter(p => p.balance > 0.01);
+                    currentDate.setUTCMonth(currentDate.getUTCMonth() + 1);
+
+                    let need_recalc = false;
+                    let is_std_bal_zero = (balTracker <= 0.01);
+                    
+                    if (is_std_bal_zero && !was_std_bal_zero) need_recalc = true;
+                    if (activePromos.length < last_promo_count) need_recalc = true;
+                    
+                    if (need_recalc && (balTracker > 0.01 || activePromos.length > 0)) {
+                        current_P = getRequiredPayment(balTracker, activePromos, cumulativeSavings, currentDate);
+                    }
+                    
+                    was_std_bal_zero = is_std_bal_zero;
+                    last_promo_count = activePromos.length;
                 }
-                displayResults(flatMonthlyPayment, numMonths);
+
+                let initialFlatPayment = 0;
+                if (calculationResultData.length > 0) {
+                    initialFlatPayment = Math.max(parseFloat(calculationResultData[0].Target_Payment), parseFloat(calculationResultData[0].Minimum_Payment));
+                }
+
+                displayResults(initialFlatPayment, calculationResultData.length);
             };
 
-            // --- DISPLAY & EXPORT ---
             const displayResults = (flatPayment, duration) => {
                 docElements.planDuration.textContent = `${duration}-Month Payoff Plan`;
                 docElements.flatPaymentResult.textContent = `$${(new Intl.NumberFormat().format(flatPayment.toFixed(2)))}`;
                 docElements.resultsTableBody.innerHTML = calculationResultData.map(row => `
                     <tr class="border-b" style="border-color: var(--border);">
                         <td class="p-3">${row.Month}</td>
-                        <td class="p-3 text-right">$${row.Minimum_Payment}</td>
+                        <td class="p-3 text-right font-medium">$${row.Target_Payment}</td>
+                        <td class="p-3 text-right text-gray-500">$${row.Minimum_Payment}</td>
                         <td class="p-3 text-right text-red-500">$${row.Interest_Paid}</td>
-                        <td class="p-3 text-right text-green-500">$${row.Principal_Paid}</td>
+                        <td class="p-3 text-right text-green-600">$${row.Standard_Principal}</td>
                         <td class="p-3 text-right">$${row.Savings_Contribution}</td>
                         <td class="p-3 text-right font-semibold">$${row.Cumulative_Savings}</td>
                         <td class="p-3 text-right">$${row.Ending_Standard_Balance}</td>
+                        <td class="p-3 text-right text-indigo-500">$${row.Ending_Promo_Balance}</td>
+                        <td class="p-3 text-center text-xs font-bold text-purple-600">${row.Notes}</td>
                     </tr>
                 `).join('');
                 docElements.resultsSection.classList.remove('hidden');
-                docElements.resultsSection.scrollIntoView({ behavior: 'smooth' });
             };
             
             const downloadCSV = () => {
                 if(calculationResultData.length === 0) return;
                 const headers = Object.keys(calculationResultData[0]);
-                const csv = [headers.join(','), ...calculationResultData.map(r => headers.map(h => r[h]).join(','))].join('\n');
+                const csv = [headers.join(','), ...calculationResultData.map(r => headers.map(h => `"${r[h]}"`).join(','))].join('\n');
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
@@ -417,7 +524,6 @@
                 URL.revokeObjectURL(link.href);
             };
             
-            // --- EVENT BINDING ---
             docElements.addStandardBtn.addEventListener('click', () => createRow(docElements.standardContainer, 'standard'));
             docElements.addPromoBtn.addEventListener('click', () => createRow(docElements.promoContainer, 'promo'));
             docElements.existingSavings.addEventListener('input', formatNumberInput);
@@ -432,10 +538,8 @@
             docElements.calculateBtn.addEventListener('click', calculatePlan);
             docElements.downloadCsvBtn.addEventListener('click', downloadCSV);
 
-            // --- INITIALIZATION ---
             loadData();
         });
     </script>
 </body>
 </html>
-
