@@ -146,11 +146,11 @@
                                     <th class="p-3">Month</th>
                                     <th class="p-3 text-right">Target Payment</th>
                                     <th class="p-3 text-right">Min Pmt</th>
-                                    <th class="p-3 text-right">Interest</th>
-                                    <th class="p-3 text-right">Std Principal</th>
-                                    <th class="p-3 text-right">Saved</th>
+                                    <th class="p-3 text-right">Savings</th>
                                     <th class="p-3 text-right">Total Saved</th>
                                     <th class="p-3 text-right">Std Bal</th>
+                                    <th class="p-3 text-right">Interest</th>
+                                    <th class="p-3 text-right">Std Principal</th>
                                     <th class="p-3 text-right">Promo Bal</th>
                                     <th class="p-3 text-center">Notes</th>
                                 </tr>
@@ -458,11 +458,11 @@
                         Month: currentDate.toLocaleDateString('en-CA'),
                         Target_Payment: actual_pmt.toFixed(2),
                         Minimum_Payment: min_pmt.toFixed(2),
-                        Interest_Paid: interest.toFixed(2),
-                        Standard_Principal: (principal - excess_min).toFixed(2),
                         Savings_Contribution: savings_contrib.toFixed(2),
                         Cumulative_Savings: cumulativeSavings.toFixed(2),
                         Ending_Standard_Balance: balTracker.toFixed(2),
+                        Interest_Paid: interest.toFixed(2),
+                        Standard_Principal: (principal - excess_min).toFixed(2),
                         Ending_Promo_Balance: ending_promo_bal.toFixed(2),
                         Notes: actionNote
                     });
@@ -500,11 +500,11 @@
                         <td class="p-3">${row.Month}</td>
                         <td class="p-3 text-right font-medium">$${row.Target_Payment}</td>
                         <td class="p-3 text-right text-gray-500">$${row.Minimum_Payment}</td>
-                        <td class="p-3 text-right text-red-500">$${row.Interest_Paid}</td>
-                        <td class="p-3 text-right text-green-600">$${row.Standard_Principal}</td>
                         <td class="p-3 text-right">$${row.Savings_Contribution}</td>
                         <td class="p-3 text-right font-semibold">$${row.Cumulative_Savings}</td>
                         <td class="p-3 text-right">$${row.Ending_Standard_Balance}</td>
+                        <td class="p-3 text-right text-red-500">$${row.Interest_Paid}</td>
+                        <td class="p-3 text-right text-green-600">$${row.Standard_Principal}</td>
                         <td class="p-3 text-right text-indigo-500">$${row.Ending_Promo_Balance}</td>
                         <td class="p-3 text-center text-xs font-bold text-purple-600">${row.Notes}</td>
                     </tr>
