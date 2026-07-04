@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Robot Vacuum Explorer</title>
+<style>
+/* ===== mobile-first base ===== */
+:root{
+  --bg:#f6f7f9; --surface:#fff; --surface-2:#f1f3f6; --line:#e6e9ee; --line-2:#d7dce3;
+  --ink:#12151b; --muted:#69727e; --accent:#0b63e5; --accent-weak:#e7f0fe;
+  --good:#0f7a44; --good-bg:#e4f4ea; --great:#0b63e5; --great-bg:#e7f0fe;
+  --warn:#a65b00; --warn-bg:#fbeecd; --neutral:#5f6b7a; --neutral-bg:#eceff3;
+  --star:#f5a623; --red:#cf3b3b;
+  --sh:0 1px 2px rgba(18,21,27,.06),0 6px 18px rgba(18,21,27,.05);
+  --sh-lg:0 -6px 30px rgba(18,21,27,.14); --r:14px; --hh:120px;
+}
+html[data-theme="dark"]{
+  --bg:#0d0f14; --surface:#161a21; --surface-2:#1d222b; --line:#262c36; --line-2:#333a46;
+  --ink:#eef1f6; --muted:#98a2b0; --accent:#5b9bff; --accent-weak:#16233c;
+  --good:#46cf8c; --good-bg:#102a1d; --great:#5b9bff; --great-bg:#12243d;
+  --warn:#e6ac5a; --warn-bg:#2e2411; --neutral:#98a2b0; --neutral-bg:#212732;
+  --star:#ffc043; --red:#f06a6a; --sh:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.45}
+button{font-family:inherit}
+
+/* header */
+.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1280px;margin:0 auto;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0))}
+.brandrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.logo{font-size:17px;font-weight:750;letter-spacing:-.01em;display:flex;align-items:center;gap:7px}
+.logo .r{font-size:19px}
+.iconbtn{width:38px;height:38px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);
+  border-radius:10px;font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.searchbox{position:relative;margin-bottom:9px}
+.searchbox input{width:100%;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);
+  border-radius:11px;padding:12px 40px 12px 40px;font-size:16px;outline:none}
+.searchbox input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+.searchbox .mag{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.searchbox .x{position:absolute;right:9px;top:50%;transform:translateY(-50%);border:none;background:var(--surface-2);
+  color:var(--muted);width:24px;height:24px;border-radius:50%;cursor:pointer;display:none}
+.searchbox.on .x{display:block}
+.ctl{display:flex;gap:8px;align-items:center}
+.ctl .grow{flex:1}
+.fbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line-2);
+  background:var(--surface);color:var(--ink);border-radius:11px;padding:11px;font-size:14.5px;font-weight:600;cursor:pointer}
+.fbtn .badge{background:var(--accent);color:#fff;border-radius:20px;font-size:12px;font-weight:700;padding:1px 7px;min-width:20px}
+.selwrap{position:relative;flex:1}
+.selwrap select{width:100%;-webkit-appearance:none;appearance:none;border:1px solid var(--line-2);background:var(--surface);
+  color:var(--ink);border-radius:11px;padding:11px 32px 11px 12px;font-size:14.5px;font-weight:600;cursor:pointer}
+.selwrap::after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.resline{display:flex;align-items:center;justify-content:space-between;margin-top:9px;gap:10px}
+.resline .n{font-size:13.5px;color:var(--muted)}
+.resline .n b{color:var(--ink)}
+
+/* active filter chips */
+.active{display:flex;gap:7px;overflow-x:auto;padding:2px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.active::-webkit-scrollbar{display:none}
+.achip{flex:none;display:inline-flex;align-items:center;gap:6px;background:var(--accent-weak);color:var(--accent);
+  border:1px solid transparent;border-radius:20px;padding:5px 8px 5px 11px;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
+.achip .c{font-weight:700;font-size:13px;line-height:1}
+.aclear{flex:none;border:none;background:none;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:underline;white-space:nowrap}
+
+/* shell */
+.shell{max-width:1280px;margin:0 auto;padding:14px}
+.main{min-height:60vh}
+
+/* results */
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:15px;box-shadow:var(--sh);
+  cursor:pointer;display:flex;flex-direction:column;gap:11px;position:relative}
+.card:active{transform:scale(.995)}
+.crow1{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.brand{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
+.card h3{margin:2px 0 0;font-size:17px;line-height:1.22;letter-spacing:-.01em}
+.yr{font-size:12px;font-weight:600;color:var(--muted);background:var(--surface-2);border-radius:7px;padding:3px 8px;white-space:nowrap}
+.badges{display:flex;flex-wrap:wrap;gap:6px}
+.b{font-size:11.5px;font-weight:650;border-radius:7px;padding:3px 8px;display:inline-flex;gap:4px;align-items:center}
+.b.good{background:var(--good-bg);color:var(--good)} .b.great{background:var(--great-bg);color:var(--great)}
+.b.warn{background:var(--warn-bg);color:var(--warn)} .b.neutral{background:var(--neutral-bg);color:var(--neutral)}
+.b.eol{background:var(--neutral-bg);color:var(--neutral)}
+.specs{display:flex;flex-wrap:wrap;gap:5px}
+.pill{font-size:11px;font-weight:600;color:var(--muted);background:var(--surface-2);border-radius:6px;padding:3px 7px}
+.pill.on{color:var(--good);background:var(--good-bg)}
+.hr{height:1px;background:var(--line)}
+.crow2{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.price .lab{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.price .now{font-size:21px;font-weight:750;letter-spacing:-.02em}
+.price .was{font-size:12px;color:var(--muted);text-decoration:line-through;margin-left:6px}
+.rt{text-align:right;min-width:120px}
+.stars{position:relative;display:inline-block;font-size:14px;letter-spacing:1.5px;line-height:1}
+.stars .u{color:var(--line-2)} .stars .f{position:absolute;left:0;top:0;overflow:hidden;white-space:nowrap;color:var(--star)}
+.rc{font-size:11px;color:var(--muted);margin-top:2px}
+.rel{margin-top:5px} .rel .bar{height:6px;border-radius:6px;background:var(--surface-2);overflow:hidden}
+.rel .bar i{display:block;height:100%} .rel .lab{font-size:10.5px;color:var(--muted);margin-top:2px;text-align:right}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty .e{font-size:40px;margin-bottom:8px}
+
+/* filter panel (mobile: bottom sheet) */
+.rail{position:fixed;left:0;right:0;bottom:0;top:0;z-index:90;background:var(--surface);
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.rail.open{transform:none}
+.scrim{position:fixed;inset:0;background:rgba(10,14,22,.4);z-index:85;opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.rhead{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+.rhead h2{margin:0;font-size:18px}
+.rbody{flex:1;overflow-y:auto;padding:4px 16px 16px;-webkit-overflow-scrolling:touch}
+.rfoot{display:flex;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0));border-top:1px solid var(--line);box-shadow:var(--sh-lg)}
+.rfoot .clear{flex:none;padding:13px 16px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);border-radius:12px;font-weight:600;cursor:pointer}
+.rfoot .show{flex:1;padding:13px;border:none;background:var(--accent);color:#fff;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer}
+
+.fgroup{border-bottom:1px solid var(--line)}
+.fgroup-h{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;
+  color:var(--ink);padding:15px 2px;font-size:15px;font-weight:650;cursor:pointer}
+.fgroup-h .sum{font-size:12.5px;font-weight:600;color:var(--muted);margin-left:auto;margin-right:10px}
+.fgroup-h .car{color:var(--muted);transition:transform .2s;font-size:12px}
+.fgroup.closed .fgroup-b{display:none}
+.fgroup.closed .car{transform:rotate(-90deg)}
+.fgroup-b{padding:2px 0 12px}
+.opt{display:flex;align-items:center;gap:11px;padding:9px 2px;cursor:pointer;user-select:none;border-radius:8px}
+.opt:active{background:var(--surface-2)}
+.opt .box{flex:none;width:21px;height:21px;border:1.5px solid var(--line-2);border-radius:6px;display:inline-flex;
+  align-items:center;justify-content:center;color:#fff;font-size:13px;transition:.12s}
+.opt.radio .box{border-radius:50%}
+.opt.sel .box{background:var(--accent);border-color:var(--accent)}
+.opt .lab{flex:1;font-size:14.5px}
+.opt .lab .sub{color:var(--muted);font-size:12px;margin-left:6px}
+.opt .cnt{flex:none;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:26px;text-align:right}
+.opt.off{opacity:.38;cursor:default;pointer-events:none}
+.opt.off .cnt{color:var(--muted)}
+.opt .swatch{width:9px;height:9px;border-radius:3px;flex:none;margin-right:-3px}
+
+/* detail sheet (mobile: bottom sheet) */
+.detwrap{position:fixed;inset:0;z-index:100;display:none;align-items:flex-end;justify-content:center}
+.detwrap.on{display:flex}
+.detback{position:absolute;inset:0;background:rgba(10,14,22,.5)}
+.detail{position:relative;background:var(--surface);width:100%;max-width:620px;max-height:90vh;overflow-y:auto;
+  border-radius:20px 20px 0 0;padding:8px 20px calc(24px + env(safe-area-inset-bottom,0));box-shadow:var(--sh-lg);
+  animation:slideup .28s cubic-bezier(.4,0,.2,1)}
+@keyframes slideup{from{transform:translateY(100%)}to{transform:none}}
+.grabber{width:38px;height:4px;border-radius:4px;background:var(--line-2);margin:8px auto 12px}
+.dhead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.dhead .dbrand{color:var(--accent);font-weight:700;text-transform:uppercase;font-size:12px;letter-spacing:.04em}
+.dhead h2{margin:3px 0 0;font-size:22px;letter-spacing:-.02em}
+.dprice{text-align:right;white-space:nowrap}
+.dprice .now{font-size:24px;font-weight:750}
+.dprice .was{display:block;font-size:12.5px;color:var(--muted);text-decoration:line-through}
+.dstars{margin:10px 0 4px;display:flex;align-items:center;gap:8px}
+.dstars .rc{margin:0}
+.dsum{color:var(--ink);font-size:14.5px;margin:12px 0 16px}
+.dbars{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.dbar{flex:1;min-width:150px}
+.dbar .k{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);display:flex;justify-content:space-between}
+.dbar .track{height:8px;border-radius:8px;background:var(--surface-2);overflow:hidden;margin-top:6px}
+.dbar .track i{display:block;height:100%}
+.dgrid{display:grid;grid-template-columns:1fr;gap:0}
+.drow{display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--line);padding:10px 0;font-size:14px}
+.drow .k{color:var(--muted)} .drow .v{font-weight:600;text-align:right}
+.drow .v.yes{color:var(--good)} .drow .v.no{color:var(--muted);font-weight:500}
+.dnote{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:12px 14px;font-size:13.5px;margin:16px 0 0}
+.dnote b{display:block;text-transform:uppercase;font-size:10.5px;letter-spacing:.05em;margin-bottom:3px}
+
+.legend{max-width:1280px;margin:0 auto;padding:0 14px 4px;display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--muted)}
+.legend .swatch{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:0}
+.foot{max-width:1280px;margin:0 auto;padding:20px 14px 60px;font-size:12px;color:var(--muted)}
+.foot b{color:var(--ink)}
+
+
+/* ===== compare ===== */
+body.cmp-open{padding-bottom:80px}
+.cmpbar{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--surface);border-top:1px solid var(--line);
+  box-shadow:0 -4px 20px rgba(18,21,27,.1);display:none;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0))}
+.cmpbar.on{display:block}
+.cmpbar-in{max-width:1280px;margin:0 auto;padding:0 14px;display:flex;align-items:center;gap:10px}
+.cmpitems{display:flex;gap:8px;overflow-x:auto;flex:1;scrollbar-width:none}
+.cmpitems::-webkit-scrollbar{display:none}
+.cmpitem{flex:none;display:inline-flex;align-items:center;gap:7px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:10px;padding:6px 8px 6px 11px;font-size:12.5px;font-weight:600;white-space:nowrap;max-width:190px}
+.cmpitem .m{overflow:hidden;text-overflow:ellipsis}
+.cmpitem .rm{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0}
+.cmpitem.slot{color:var(--muted);font-weight:500;border-style:dashed;background:transparent}
+.cmpactions{display:flex;gap:8px;flex:none}
+.cmpclear{border:1px solid var(--line-2);background:var(--surface);color:var(--ink);border-radius:10px;padding:9px 12px;font-weight:600;cursor:pointer;font-size:13px}
+.cmpopen{border:none;background:var(--accent);color:#fff;border-radius:10px;padding:9px 15px;font-weight:700;cursor:pointer;font-size:13.5px;white-space:nowrap}
+.cmpopen:disabled{opacity:.5;cursor:default}
+.c1r{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.cmp-toggle{border:1px solid var(--line-2);background:var(--surface);color:var(--muted);border-radius:8px;padding:5px 9px;
+  font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.cmp-toggle.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.cmp-toggle.dis{opacity:.4;cursor:default}
+.card.comparing{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak),var(--sh)}
+.cmpwrap{position:fixed;inset:0;z-index:110;display:none;align-items:flex-end;justify-content:center}
+.cmpwrap.on{display:flex}
+.cmpback{position:absolute;inset:0;background:rgba(10,14,22,.5)}
+.cmppanel{position:relative;background:var(--surface);width:100%;max-width:960px;max-height:92vh;overflow:hidden;
+  border-radius:20px 20px 0 0;box-shadow:var(--sh-lg);display:flex;flex-direction:column;animation:slideup .28s cubic-bezier(.4,0,.2,1)}
+.cmphead{display:flex;align-items:center;justify-content:space-between;padding:15px 18px 12px;border-bottom:1px solid var(--line)}
+.cmphead h2{margin:0;font-size:19px}
+.cmpscroll{overflow:auto;-webkit-overflow-scrolling:touch}
+table.cmp{border-collapse:collapse;width:100%}
+table.cmp th,table.cmp td{border-bottom:1px solid var(--line);padding:11px 12px;text-align:left;vertical-align:top;font-size:13px}
+table.cmp .rowlab{position:sticky;left:0;background:var(--surface-2);z-index:2;font-weight:650;color:var(--muted);
+  font-size:11px;text-transform:uppercase;letter-spacing:.03em;min-width:104px;white-space:nowrap}
+table.cmp thead th{position:sticky;top:0;background:var(--surface);z-index:3}
+table.cmp thead th.rowlab{z-index:4}
+table.cmp thead .dev{min-width:148px}
+.dev .dtop{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.dev .db{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--accent)}
+.dev .dm{font-size:13.5px;font-weight:650;margin-top:1px;white-space:normal;line-height:1.2}
+.dev .dmeta{margin-top:6px;font-size:12px;color:var(--muted);font-weight:600;white-space:normal}
+.dev .rm{border:none;background:var(--surface-2);color:var(--muted);border-radius:6px;width:22px;height:22px;cursor:pointer;flex:none;font-size:12px}
+table.cmp td.best{background:var(--good-bg);font-weight:700;color:var(--good)}
+table.cmp td .yes{color:var(--good);font-weight:700}
+table.cmp td .no{color:var(--muted)}
+@media(min-width:640px){.cmpwrap{align-items:center;padding:24px}.cmppanel{border-radius:20px}}
+
+/* ===== tablet ===== */
+@media(min-width:640px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:14px}
+  .detwrap{align-items:center;padding:24px}
+  .detail{border-radius:20px;animation:pop .2s ease}
+  @keyframes pop{from{transform:scale(.96);opacity:.6}to{transform:none;opacity:1}}
+  .grabber{display:none}
+  .dgrid{grid-template-columns:1fr 1fr;gap:0 26px}
+}
+/* ===== desktop: filters become a sidebar ===== */
+@media(min-width:1000px){
+  .top-in{padding:12px 20px}
+  .brandrow{margin-bottom:0}
+  .searchbox{max-width:660px}
+  .desk-inline{display:flex;align-items:center;gap:12px}
+  .fbtn{display:none}
+  .shell{display:grid;grid-template-columns:288px 1fr;gap:22px;padding:18px 20px}
+  .rail{position:sticky;top:calc(var(--hh) + 14px);bottom:auto;left:auto;right:auto;transform:none;z-index:1;
+    height:calc(100vh - var(--hh) - 34px);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+  .rail .rhead{display:none}
+  .rail .rfoot{box-shadow:none}
+  .rail .rfoot .show{display:none}
+  .rail .rfoot .clear{flex:1;text-align:center}
+  .scrim{display:none}
+  .resbar-desk{display:flex}
+}
+@media(min-width:1000px){ .mobileonly{display:none!important} }
+@media(max-width:999px){ .deskonly{display:none!important} }
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="brandrow">
+    <div class="logo"><span class="r">🤖</span>Robot Vacuum Explorer</div>
+    <button class="iconbtn" id="theme" title="Theme">◐</button>
+  </div>
+  <div class="searchbox" id="sb">
+    <span class="mag">⌕</span>
+    <input id="search" type="search" placeholder="Search brand, model, feature, nav type…" autocomplete="off">
+    <button class="x" title="Clear">✕</button>
+  </div>
+  <div class="ctl">
+    <button class="fbtn mobileonly" id="openFilters">
+      <span>⚙︎ Filters</span><span class="badge" id="fbadge" style="display:none">0</span>
+    </button>
+    <div class="selwrap grow">
+      <select id="sort" aria-label="Sort">
+        <option value="featured">Sort: Featured</option>
+        <option value="price-asc">Price: Low → High</option>
+        <option value="price-desc">Price: High → Low</option>
+        <option value="stars-desc">Rating: High → Low</option>
+        <option value="rel-desc">Reliability: High → Low</option>
+        <option value="suction-desc">Suction: High → Low</option>
+        <option value="year-desc">Newest first</option>
+        <option value="brand-asc">Brand: A → Z</option>
+      </select>
+    </div>
+  </div>
+  <div class="resline">
+    <span class="n"><b id="count">0</b> of <span id="total">0</span> models</span>
+    <div class="active" id="activeChips"></div>
+  </div>
+</div></header>
+
+<div class="legend">
+  <span><span class="swatch" style="background:var(--good)"></span>LiDAR / 3D — best nav</span>
+  <span><span class="swatch" style="background:var(--great)"></span>LiDAR + Camera</span>
+  <span><span class="swatch" style="background:var(--warn)"></span>Camera (vSLAM) — weaker</span>
+  <span><span class="swatch" style="background:var(--neutral)"></span>Gyroscope — basic</span>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="shell">
+  <aside class="rail" id="rail">
+    <div class="rhead"><h2>Filters</h2><button class="iconbtn" id="closeFilters">✕</button></div>
+    <div class="rbody" id="rbody"></div>
+    <div class="rfoot">
+      <button class="clear" id="clearAll">Clear</button>
+      <button class="show" id="showResults">Show results</button>
+    </div>
+  </aside>
+  <main class="main"><div id="results"></div></main>
+</div>
+
+<div class="cmpbar" id="cmpbar"><div class="cmpbar-in">
+  <div class="cmpitems" id="cmpitems"></div>
+  <div class="cmpactions">
+    <button class="cmpclear" id="cmpClear">Clear</button>
+    <button class="cmpopen" id="cmpOpen" disabled>Compare <span id="cmpn">0</span></button>
+  </div>
+</div></div>
+<div class="cmpwrap" id="cmpwrap"><div class="cmpback" id="cmpback"></div><div class="cmppanel" id="cmppanel"></div></div>
+
+<div class="foot" id="foot"></div>
+
+<div class="detwrap" id="detwrap"><div class="detback" id="detback"></div><div class="detail" id="detail"></div></div>
+
+<script>
+const DATA = [{"brand":"iRobot","model":"Roomba Vac Essential (Q0120)","year":2024,"discontinued":false,"nav_type":"Gyroscope","suction_pa":null,"mopping_type":"None","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"None (bump sensors)","notable_app":"iRobot Home (basic)","price_street_usd":150,"price_msrp_usd":250,"user_stars":4.1,"review_count":3000,"reliability_score":70,"known_issues":"Random navigation, no mapping; simplified app; gets stuck","summary":"Entry point of the 2024 rebrand, a bump-and-go vacuum that replaced the 600 series with a cleaner design and app."},{"brand":"iRobot","model":"Roomba Combo Essential","year":2024,"discontinued":false,"nav_type":"Gyroscope","suction_pa":null,"mopping_type":"Static drag pad","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"None (bump sensors)","notable_app":"iRobot Home (basic)","price_street_usd":180,"price_msrp_usd":275,"user_stars":4,"review_count":3500,"reliability_score":66,"known_issues":"No mapping; drag-pad mopping minimal; single brush roll tangles with hair","summary":"Budget 2-in-1 of the 2024 rebrand offering basic random-path vacuuming plus a light drag mop, aimed at first-time buyers."},{"brand":"iRobot","model":"Roomba Combo 2 Essential","year":2024,"discontinued":false,"nav_type":"Gyroscope","suction_pa":null,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"None (bump sensors)","notable_app":"iRobot Home (basic)","price_street_usd":250,"price_msrp_usd":350,"user_stars":4,"review_count":2000,"reliability_score":67,"known_issues":"Still no mapping despite auto-empty dock; light mopping; random coverage","summary":"Late-2024 refresh adding an auto-empty dock and 2x cleaning power to the Combo Essential while keeping basic random navigation."},{"brand":"iRobot","model":"Roomba 105 Vac / 105 Combo","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":null,"mopping_type":"Static drag pad","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping only (no AI camera)","notable_app":"iRobot Home w/ ClearView LiDAR maps","price_street_usd":250,"price_msrp_usd":320,"user_stars":4.2,"review_count":1500,"reliability_score":76,"known_issues":"No camera object avoidance; optional dock costs extra; new platform","summary":"iRobot's cheapest LiDAR Roomba, bringing fast laser mapping to the budget tier in the 2025 relaunch, with light optional mopping."},{"brand":"iRobot","model":"Roomba 205 DustCompactor","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":null,"mopping_type":"Static drag pad","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping only (internal half-LiDAR)","notable_app":"iRobot Home w/ ClearView LiDAR maps","price_street_usd":300,"price_msrp_usd":449,"user_stars":4,"review_count":1200,"reliability_score":71,"known_issues":"Internal LiDAR less accurate than turret; gets stuck on toys/shiny floors; no dock","summary":"Dock-free Roomba that compacts debris inside its own bin for up to 60 days using a slim internal-LiDAR design, clever but stumble-prone."},{"brand":"iRobot","model":"Roomba Plus 405 Combo","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":null,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"LiDAR mapping only (no AI camera)","notable_app":"iRobot Home w/ ClearView LiDAR, AutoWash dock","price_street_usd":399,"price_msrp_usd":799,"user_stars":3.8,"review_count":900,"reliability_score":62,"known_issues":"No camera object avoidance so eats cords; rated an underperformer; dock/app quirks","summary":"iRobot's first dual-spinning-pad AutoWash combo brings LiDAR and pad-lift, but lacks AI avoidance and reviewed poorly against rivals."},{"brand":"iRobot","model":"Roomba Plus 505 Combo","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":null,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"PrecisionVision AI + ClearView Pro LiDAR","notable_app":"iRobot Home w/ ClearView Pro LiDAR, PrecisionVision","price_street_usd":599,"price_msrp_usd":999,"user_stars":4.1,"review_count":700,"reliability_score":74,"known_issues":"Loud operation; new dock/app platform still maturing","summary":"Flagship of the 2025 relaunch pairing LiDAR with PrecisionVision AI, dual spinning pads, heated pad drying, and a full AutoWash dock."},{"brand":"iRobot","model":"Roomba Max 705 Vac","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":null,"mopping_type":"None","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping only (no AI camera)","notable_app":"iRobot Home w/ ClearView LiDAR maps","price_street_usd":400,"price_msrp_usd":500,"user_stars":4.2,"review_count":800,"reliability_score":76,"known_issues":"Vacuum-only (no mop); no camera object avoidance; pricey vs LiDAR competitors","summary":"Top vacuum-only model of the 2025 lineup with the strongest suction and fast LiDAR mapping plus a bagged auto-empty dock."},{"brand":"Roborock","model":"S8 Pro Ultra","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":6000,"mopping_type":"Vibrating flat pad","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"ReactiveAI 2.0 (structured light, no camera)","notable_app":"Roborock app with full dock automation","price_street_usd":900,"price_msrp_usd":1599,"user_stars":4.5,"review_count":5000,"reliability_score":82,"known_issues":"Room-temp mop wash only; 5mm mop lift; dock tanks need periodic cleaning","summary":"The full RockDock all-in-one S8: 6,000Pa, DuoRoller brush, self-wash and refill, a proven mainstream flagship."},{"brand":"Roborock","model":"S8 MaxV Ultra","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":10000,"mopping_type":"Vibrating flat pad","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"ReactiveAI 3.0 (RGB camera + 3D structured light)","notable_app":"Roborock app with voice assistant and extendable side brush/mop","price_street_usd":1000,"price_msrp_usd":1799,"user_stars":4.4,"review_count":2500,"reliability_score":80,"known_issues":"Extendable side brush/mop sometimes fails to deploy; onboard voice assistant buggy","summary":"The 2024 top-tier S8: 10,000Pa, FlexiArm extending side brush, 20mm mop lift and 60C hot-water dock washing."},{"brand":"Roborock","model":"S8 Max Ultra","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":8000,"mopping_type":"Vibrating flat pad","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"ReactiveAI (structured light, no camera)","notable_app":"Roborock app with FlexiArm side brush controls","price_street_usd":900,"price_msrp_usd":1599,"user_stars":4.4,"review_count":1500,"reliability_score":81,"known_issues":"No camera vs MaxV so weaker object recognition; FlexiArm deploy hiccups","summary":"A near-MaxV Ultra that keeps hot-water washing and FlexiArm side brush but drops the camera and trims suction to 8,000Pa."},{"brand":"Roborock","model":"Q8 Max+","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":5500,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"Reactive Tech (LiDAR, no camera)","notable_app":"Roborock app with DuoRoller and no-go zones","price_street_usd":300,"price_msrp_usd":599,"user_stars":4.4,"review_count":7000,"reliability_score":84,"known_issues":"Passive drag mop with no wash or lift; basic obstacle avoidance","summary":"Value standout adding the DuoRoller brush and 5,500Pa to the Q line with an auto-empty dock, frequently on deep discount."},{"brand":"Roborock","model":"Q Revo","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":5500,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"None (LiDAR only)","notable_app":"Roborock app with dual-spin mop and full dock automation","price_street_usd":700,"price_msrp_usd":1399,"user_stars":4.4,"review_count":4000,"reliability_score":82,"known_issues":"No camera avoidance; room-temp wash; frequently on ~$799 or lower deals","summary":"First Roborock with dual spinning mop pads plus a full self-wash/refill dock, making all-in-one convenience affordable."},{"brand":"Roborock","model":"Q Revo Pro","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":7000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"Reactive AI (camera-assisted)","notable_app":"Roborock app with FlexiArm edge mopping","price_street_usd":750,"price_msrp_usd":1099,"user_stars":4.4,"review_count":2500,"reliability_score":82,"known_issues":"Camera avoidance weaker than structured-light rivals; dock upkeep needed","summary":"Added FlexiArm edge-hugging mop, hot-water dock washing and 7,000Pa to the Qrevo formula at a mid price."},{"brand":"Roborock","model":"Qrevo MaxV","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":7000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"ReactiveAI (RGB camera + LiDAR)","notable_app":"Roborock app with StarSight-era mapping and video","price_street_usd":900,"price_msrp_usd":1799,"user_stars":4.4,"review_count":2000,"reliability_score":81,"known_issues":"7,000Pa modest for the price; camera avoidance trails structured-light models","summary":"Camera-equipped Qrevo flagship with FlexiArm mop and hot-water dock, positioned just below the S8 MaxV Ultra."},{"brand":"Roborock","model":"Qrevo Master","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":10000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"ReactiveAI (RGB camera + LiDAR)","notable_app":"Roborock app with FlexiArm side brush and mop","price_street_usd":900,"price_msrp_usd":1599,"user_stars":4.5,"review_count":3000,"reliability_score":82,"known_issues":"Puck LiDAR limits under-furniture reach; superseded by slimmer Qrevo models","summary":"10,000Pa dual-spin flagship with FlexiArm side brush and mop plus hot-water washing, a strong heavy-pet-hair performer."},{"brand":"Roborock","model":"Qrevo Curv","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":18500,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI obstacle recognition (structured light)","notable_app":"Roborock app with AdaptiLift chassis and FlexiArm","price_street_usd":900,"price_msrp_usd":1599,"user_stars":4.4,"review_count":1500,"reliability_score":81,"known_issues":"First-gen AdaptiLift threshold climbing can hesitate; premium price","summary":"Introduced the AdaptiLift chassis that raises the whole robot up to 4cm over thresholds, with 18,500Pa suction and 17mm mop lift."},{"brand":"Roborock","model":"Qrevo CurvX","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":22000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI obstacle recognition (structured light)","notable_app":"Roborock app with Dock 3.0 Thermo and AdaptiLift","price_street_usd":900,"price_msrp_usd":1599,"user_stars":4.5,"review_count":1000,"reliability_score":83,"known_issues":"No camera so object ID trails MaxV models; heavy dock footprint","summary":"Curv refresh with 22,000Pa, a slim body, AdaptiLift, and hotter Dock 3.0 Thermo washing plus warm-water mopping."},{"brand":"Roborock","model":"Qrevo Slim","year":2025,"discontinued":false,"nav_type":"Structured Light 3D","suction_pa":11000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"StarSight puck-less 3D obstacle recognition","notable_app":"Roborock app with ultra-slim profile controls","price_street_usd":1000,"price_msrp_usd":1399,"user_stars":4.4,"review_count":1000,"reliability_score":81,"known_issues":"Puck-less nav slightly less precise mapping than LiDAR; premium for the slimness","summary":"Roborock's puck-less design drops the LiDAR turret for an 8.2cm ultra-slim body that slides under low furniture, with 11,000Pa."},{"brand":"Roborock","model":"Qrevo Edge","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":18500,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI obstacle recognition (structured light)","notable_app":"Roborock app with Dock 3.0 and Dual Anti-Tangle system","price_street_usd":1000,"price_msrp_usd":1599,"user_stars":4.5,"review_count":1200,"reliability_score":83,"known_issues":"No camera; large dock; overlaps heavily with Curv lineup","summary":"Blends Curv tech with a self-cleaning Dock 3.0 and DuoDivide anti-tangle brush claiming near-zero hair wrap, at 18,500Pa."},{"brand":"Roborock","model":"Saros 10","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":22000,"mopping_type":"Vibrating flat pad","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"StarSight 2.0 + retractable RGB camera","notable_app":"Roborock app with retractable LDS and hot-air drying","price_street_usd":1100,"price_msrp_usd":1599,"user_stars":4.5,"review_count":1200,"reliability_score":84,"known_issues":"Retractable LiDAR mechanism is new; occasional mapping glitches on early firmware","summary":"2025 flagship with a retractable LiDAR puck for a 3.14-inch slim body, 22,000Pa, VibraRise mopping and hot-air mop drying."},{"brand":"Roborock","model":"Saros 10R","year":2025,"discontinued":false,"nav_type":"Structured Light 3D","suction_pa":22000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"StarSight 2.0 solid-state LiDAR + Reactive AI (best-in-class)","notable_app":"Roborock app with FlexiArm Riser and Dock 4.0","price_street_usd":999,"price_msrp_usd":1599,"user_stars":4.6,"review_count":2500,"reliability_score":85,"known_issues":"Early-2025 units had navigation bugs largely fixed by firmware; loud self-empty cycle","summary":"Solid-state StarSight nav (no puck), 22,000Pa, zero-tangle brush and dual-spin mop, rated among the best overall by reviewers."},{"brand":"Roborock","model":"Saros Z70","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":22000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"StarSight 2.0, ~99.8% avoidance + OmniGrip robotic arm","notable_app":"Roborock app controlling the OmniGrip 5-axis robotic arm","price_street_usd":1800,"price_msrp_usd":2599,"user_stars":3.9,"review_count":200,"reliability_score":72,"known_issues":"OmniGrip arm succeeds ~50% of the time and recognizes only 4 object types; price hard to justify","summary":"The headline robot with a retractable 5-axis OmniGrip arm that picks up socks and tissues, an excellent vac hobbled by a gimmicky first-gen arm."},{"brand":"Roborock","model":"Q7 M5+","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":10000,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"None (LiDAR only)","notable_app":"Roborock app with 2.7L auto-empty bag (up to 7 weeks)","price_street_usd":350,"price_msrp_usd":599,"user_stars":4.4,"review_count":2000,"reliability_score":83,"known_issues":"Passive drag mop, no wash/lift; value-tier obstacle avoidance","summary":"2025 budget refresh jumping to 10,000Pa with a 2.7L self-empty dock lasting up to seven weeks."},{"brand":"Roborock","model":"F25 Ultra (wet-dry, not a robot)","year":2025,"discontinued":false,"nav_type":"Gyroscope","suction_pa":20000,"mopping_type":"Roller mop","self_empty":false,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"N/A (manual push wet-dry vac)","notable_app":"Roborock app with steam and hot-water roller controls","price_street_usd":550,"price_msrp_usd":799,"user_stars":4.5,"review_count":800,"reliability_score":84,"known_issues":"Not a robot; manual wet-dry stick vac; steam variant runs hotter/pricier","summary":"Manual wet-dry floor washer (not a robot) with 20,000Pa, hot-water/steam roller cleaning and self-washing, a category-leading mop-vac."},{"brand":"Ecovacs","model":"Deebot X2 Omni","year":2023,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":8000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AIVI 3D + AI camera","notable_app":"Ecovacs Home + YIKO voice","price_street_usd":900,"price_msrp_usd":1500,"user_stars":4.3,"review_count":3500,"reliability_score":79,"known_issues":"Square design gets stuck in tight spots, occasional mapping loss, tall dock","summary":"Distinctive square-body flagship with 8000Pa suction and dual-laser nav that reaches corners better than round rivals."},{"brand":"Ecovacs","model":"Deebot T30S Combo","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":11000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"TrueDetect 3D (no AI camera)","notable_app":"Ecovacs Home + YIKO","price_street_usd":800,"price_msrp_usd":1200,"user_stars":4.4,"review_count":2200,"reliability_score":81,"known_issues":"No AI-camera obstacle avoidance, bundled handheld adds bulk","summary":"High-value combo pairing an 11000Pa Omni robot with a detachable handheld stick vacuum for whole-home coverage."},{"brand":"Ecovacs","model":"Deebot T30 Omni","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":11000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AIVI 3D + AI camera","notable_app":"Ecovacs Home + YIKO","price_street_usd":800,"price_msrp_usd":1200,"user_stars":4.4,"review_count":1500,"reliability_score":81,"known_issues":"Extending mop occasionally misses deep edges, limited US availability","summary":"Compact all-in-one with 11000Pa suction and edge-extending mop, a strong value flagship-lite for its price."},{"brand":"Ecovacs","model":"Deebot N30 Pro Omni","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":10000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"LiDAR + basic sensors","notable_app":"Ecovacs Home","price_street_usd":600,"price_msrp_usd":850,"user_stars":4.3,"review_count":1000,"reliability_score":80,"known_issues":"No AI camera so bumps small objects, newer model with limited review history","summary":"Aggressively priced Omni-station vacuum delivering flagship-style features at a mid-range cost via cheaper LiDAR-only nav."},{"brand":"Ecovacs","model":"Deebot X8 Pro Omni","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":18000,"mopping_type":"Roller mop","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AIVI 3D + AI camera, ZeroTangle 2.0","notable_app":"Ecovacs Home + Matter/HomeKit","price_street_usd":800,"price_msrp_usd":1200,"user_stars":4.5,"review_count":1400,"reliability_score":83,"known_issues":"Roller reservoir needs refilling on large jobs, chatty voice prompts","summary":"Roller-mop flagship (OZMO ROLLER) with self-washing continuous rinse and class-leading edge cleaning plus Matter support."},{"brand":"Ecovacs","model":"Deebot X8 Omni","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":8000,"mopping_type":"Roller mop","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AIVI 3D + AI camera","notable_app":"Ecovacs Home","price_street_usd":650,"price_msrp_usd":1000,"user_stars":4.4,"review_count":700,"reliability_score":82,"known_issues":"Lower suction than Pro, fewer edge features, newer with thin review base","summary":"Standard X8 with the same self-washing roller mop but reduced 8000Pa suction at a lower price than the Pro."},{"brand":"Dreame","model":"L10s Ultra Gen 2","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":10000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI camera + LiDAR, MopExtend","notable_app":"Dreamehome","price_street_usd":450,"price_msrp_usd":700,"user_stars":4.4,"review_count":2500,"reliability_score":80,"known_issues":"No hot-water washing, occasional edge-mop misses","summary":"Refreshed L10s Ultra doubling suction to 10000Pa and adding edge-extending MopExtend at a strong mid-range price."},{"brand":"Dreame","model":"L20 Ultra","year":2023,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":7000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI camera + LiDAR, MopExtend","notable_app":"Dreamehome","price_street_usd":600,"price_msrp_usd":1500,"user_stars":4.5,"review_count":3000,"reliability_score":82,"known_issues":"Tall dock, mop auto-removal mechanism occasionally jams","summary":"Award-winning 2023 flagship introducing auto mop-removal for carpet and edge-extending pads, now a value pick."},{"brand":"Dreame","model":"X40 Ultra","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":12000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI camera + LiDAR, liftable brushes","notable_app":"Dreamehome + Matter","price_street_usd":1000,"price_msrp_usd":1500,"user_stars":4.5,"review_count":3500,"reliability_score":84,"known_issues":"Expensive, tall dock, occasional mop-reattach errors","summary":"Top-rated 2024 flagship with 12000Pa suction, liftable side brush and detachable mops for full carpet-and-hardfloor coverage."},{"brand":"Dreame","model":"X40 Master","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":12000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI camera + LiDAR","notable_app":"Dreamehome + Matter","price_street_usd":900,"price_msrp_usd":1300,"user_stars":4.5,"review_count":900,"reliability_score":84,"known_issues":"Compact 11-inch dock trades water capacity, newer with limited reviews","summary":"X40-class performance in a compact auto-refill/drain base aimed at users plumbing the station into water lines."},{"brand":"Dreame","model":"L40 Ultra","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":11000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI camera + LiDAR, MopExtend","notable_app":"Dreamehome","price_street_usd":700,"price_msrp_usd":1300,"user_stars":4.5,"review_count":2800,"reliability_score":83,"known_issues":"Gen 1 vs Gen 2 confusion, occasional app disconnects","summary":"Value-focused flagship-lite matching much of the X40's feature set (detachable mops, hot wash) for less money."},{"brand":"Dreame","model":"L40 Ultra Gen 2","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":25000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI camera + LiDAR, MopExtend","notable_app":"Dreamehome + Matter","price_street_usd":800,"price_msrp_usd":1400,"user_stars":4.5,"review_count":1200,"reliability_score":83,"known_issues":"Very high headline suction rarely needed, newer release","summary":"Second-gen L40 Ultra with a huge 25000Pa suction rating and refined dock, undercutting the X-series on price."},{"brand":"Dreame","model":"X50 Ultra","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":20000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI camera + LiDAR, retractable ProLeap legs","notable_app":"Dreamehome + Matter","price_street_usd":899,"price_msrp_usd":1699,"user_stars":4.5,"review_count":1500,"reliability_score":84,"known_issues":"ProLeap step-climbing is niche, tall dock","summary":"2025 halo model whose ProLeap retractable legs let it climb thresholds and small steps, with 20000Pa suction; now streets near $899."},{"brand":"Dreame","model":"L50 Ultra","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":19500,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI camera + LiDAR, retractable ProLeap legs","notable_app":"Dreamehome + Matter","price_street_usd":800,"price_msrp_usd":1600,"user_stars":4.6,"review_count":1300,"reliability_score":85,"known_issues":"Slightly shorter runtime than X50, dropped fast in price","summary":"Near-flagship with the same ProLeap step-climbing and ~19500Pa suction as the X50 Ultra at a lower street price, a standout value."},{"brand":"Eufy","model":"X10 Pro Omni","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":8000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"AI.See RGB camera + 3D ToF, detects 100+ objects","notable_app":"Eufy Clean (full Omni station control)","price_street_usd":480,"price_msrp_usd":800,"user_stars":4.5,"review_count":8000,"reliability_score":86,"known_issues":"Water tanks (not plumbed), occasional dock wash residue","summary":"Value flagship with 8000Pa, dual spinning mops with 12mm auto-lift, and a fully automated wash/dry/empty station."},{"brand":"Eufy","model":"Omni S1 Pro","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":8000,"mopping_type":"Roller mop","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"3D ToF + RGB AI camera obstacle avoidance","notable_app":"Eufy Clean (UniClean station, ozone sanitize)","price_street_usd":1099,"price_msrp_usd":1499,"user_stars":4.3,"review_count":1500,"reliability_score":80,"known_issues":"Expensive to maintain, weak on carpet, premium price","summary":"Premium design-forward robot with a self-rinsing HydroJet roller mop and ozone-sanitizing UniClean station."},{"brand":"Eufy","model":"Robot Vacuum 3-in-1 E20","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":8000,"mopping_type":"None","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"Triple-line laser obstacle avoidance","notable_app":"Eufy Clean (converts to stick + handheld)","price_street_usd":300,"price_msrp_usd":550,"user_stars":4.2,"review_count":1200,"reliability_score":80,"known_issues":"Convertible design adds bulk, no mopping, new product","summary":"Novel 3-in-1 that detaches into a 30,000Pa cordless stick and handheld vacuum plus a self-emptying robot."},{"brand":"Eufy","model":"Omni E25","year":2025,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":20000,"mopping_type":"Roller mop","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"LiDAR + RGB camera AI obstacle recognition","notable_app":"Eufy Clean (HydroJet live-rinse roller mop)","price_street_usd":700,"price_msrp_usd":900,"user_stars":4.4,"review_count":900,"reliability_score":83,"known_issues":"New product, tall station footprint, water tanks not plumbed","summary":"Mid-range Omni with a self-cleaning HydroJet roller mop, 20,000Pa suction and a full wash/dry/empty station."},{"brand":"Shark","model":"AI Ultra 2-in-1 RV2620WD","year":2022,"discontinued":false,"nav_type":"LiDAR","suction_pa":null,"mopping_type":"Vibrating flat pad","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"360 LiDAR + Matrix Clean grid, no AI camera","notable_app":"SharkClean (Matrix Clean, sonic mop)","price_street_usd":300,"price_msrp_usd":450,"user_stars":4.2,"review_count":4000,"reliability_score":80,"known_issues":"No self-empty, basic app, pad mop is light-duty","summary":"LiDAR 2-in-1 with sonic vibrating mop and Matrix grid cleaning but no self-empty dock."},{"brand":"Shark","model":"Matrix Plus 2-in-1 RV2610WA","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":null,"mopping_type":"Vibrating flat pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"360 LiDAR + Matrix Clean grid, no AI camera","notable_app":"SharkClean (Matrix Clean, HEPA self-empty)","price_street_usd":300,"price_msrp_usd":700,"user_stars":3.9,"review_count":12000,"reliability_score":77,"known_issues":"Navigation gets stuck, no AI avoidance, no auto mop swap","summary":"LiDAR vacuum-and-sonic-mop with a HEPA self-empty base, solid hardware held back by dated software."},{"brand":"Shark","model":"Detect Pro Self-Empty RV2820AE","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":null,"mopping_type":"None","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"DirtDetect/EdgeDetect + NeverStuck, LiDAR","notable_app":"SharkClean (Detect & React tech)","price_street_usd":400,"price_msrp_usd":600,"user_stars":4.3,"review_count":5000,"reliability_score":82,"known_issues":"DirtDetect inconsistent, no mop, occasional map loss","summary":"Vacuum-only Shark with strong debris pickup, DirtDetect boosting, NeverStuck wheels and a 60-day self-empty base."},{"brand":"Shark","model":"PowerDetect 2-in-1 AV2820AE","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":null,"mopping_type":"Vibrating flat pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"360 LiDAR + 3D sensor, DirtDetect/EdgeDetect","notable_app":"SharkClean (PowerDetect suite)","price_street_usd":550,"price_msrp_usd":600,"user_stars":4.2,"review_count":2500,"reliability_score":80,"known_issues":"Mop not auto-washed on this trim, basic app controls","summary":"PowerDetect robot with LiDAR plus 3D sensing and a self-empty base, but manual mop-pad maintenance."},{"brand":"Shark","model":"PowerDetect NeverTouch Pro RV2820ZE","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":null,"mopping_type":"Vibrating flat pad","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"360 LiDAR + 3D sensor, DirtDetect/EdgeDetect","notable_app":"SharkClean (NeverTouch Pro station)","price_street_usd":850,"price_msrp_usd":1000,"user_stars":4,"review_count":2000,"reliability_score":76,"known_issues":"Navigation quirks, app too basic, no suction-level control","summary":"Shark's first auto-mop-washing flagship with a NeverTouch Pro base that empties, refills and washes/dries the pad."},{"brand":"Narwal","model":"Freo X Ultra","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":8200,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"Tri-laser + structured light","notable_app":"Narwal Freo","price_street_usd":650,"price_msrp_usd":1399,"user_stars":4.3,"review_count":3500,"reliability_score":74,"known_issues":"Open-floor-plan mapping problems, slow customer support, in-robot dust bag","summary":"Top-tier zero-tangle vacuum-mop with 8,200Pa, hot-water self-washing dock, and a heavily discounted street price making it a strong value."},{"brand":"Narwal","model":"Freo X Plus","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":7800,"mopping_type":"Dual spinning pads","self_empty":false,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"Tri-laser obstacle avoidance","notable_app":"Narwal Freo","price_street_usd":300,"price_msrp_usd":400,"user_stars":4.2,"review_count":2000,"reliability_score":70,"known_issues":"No auto-empty dock and no full auto mop-wash station, struggles with dried stains","summary":"Budget zero-tangle model with 7,800Pa suction and 7-week in-robot dust storage but no full docking station."},{"brand":"Narwal","model":"Freo Z Ultra","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":12000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"Dual RGB camera AI + LiDAR","notable_app":"Narwal Freo","price_street_usd":950,"price_msrp_usd":1499,"user_stars":4.3,"review_count":900,"reliability_score":73,"known_issues":"Erratic navigation per reviewers, weaker on carpet, premium price","summary":"AI flagship with dual RGB cameras, 12,000Pa suction, and EdgeSwing mopping that excels on hard floors but can behave erratically."},{"brand":"Narwal","model":"Freo Pro","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":8500,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"LiDAR + forward structured light","notable_app":"Narwal Freo","price_street_usd":550,"price_msrp_usd":699,"user_stars":4.4,"review_count":1500,"reliability_score":80,"known_issues":"Warm-air (not hot-water) mop wash, mid-tier obstacle avoidance vs camera models","summary":"Value-leader 2025 model with DualFlow tangle-free system, 8,500Pa suction, and self-emptying dock at an affordable price."},{"brand":"Samsung","model":"Jet Bot Combo","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":6000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"LiDAR + 3D sensor (no AI camera)","notable_app":"SmartThings","price_street_usd":900,"price_msrp_usd":1399,"user_stars":4.1,"review_count":500,"reliability_score":71,"known_issues":"No AI object-recognition camera, large maintenance-heavy dock, average carpet handling","summary":"Bespoke Jet Bot Combo with spinning mop pads and a rare 100C auto-steam sanitizing dock, but lacking the AI camera of the top model."},{"brand":"Samsung","model":"Bespoke Jet Bot Combo AI","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":6000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"AI Object Recognition camera + LiDAR","notable_app":"SmartThings","price_street_usd":1200,"price_msrp_usd":1699,"user_stars":4.1,"review_count":400,"reliability_score":70,"known_issues":"Buggy/immature app and missing features, low-ish 6,000Pa suction, huge dock, weak edge cleaning","summary":"Samsung's flagship 3-in-1 with AI object recognition, steam-mop sanitizing, and SmartThings smarts, held back by software bugs and modest suction."},{"brand":"LG","model":"CordZero R5 ThinQ","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":5000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"360 LiDAR, basic; no dedicated camera AI avoidance","notable_app":"LG ThinQ","price_street_usd":750,"price_msrp_usd":800,"user_stars":3.9,"review_count":300,"reliability_score":62,"known_issues":"Map deletion requiring remapping, battery degradation within months, gets stuck, hard-to-find parts","summary":"LG's mid-range all-in-one with dual spinning mop pads, LiDAR nav and auto-empty/mop-wash tower, but hampered by mapping and battery reliability complaints."},{"brand":"SwitchBot","model":"S10","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":6500,"mopping_type":"Roller mop","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":true,"mop_lift":true,"obstacle_avoidance":"AI obstacle avoidance with LiDAR plus camera","notable_app":"SwitchBot","price_street_usd":900,"price_msrp_usd":1200,"user_stars":4,"review_count":900,"reliability_score":60,"known_issues":"Water station/plumbing kit failures and leaks, roller-brush issues, mixed warranty service","summary":"SwitchBot's flagship with a self-rinsing RevoRoll roller mop and a dual water station that ties into home plumbing for hands-free refill/drain, though plumbing-kit reliability is a recurring complaint."},{"brand":"SwitchBot","model":"K10+","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":2500,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping only; minimal obstacle avoidance","notable_app":"SwitchBot","price_street_usd":300,"price_msrp_usd":400,"user_stars":4.1,"review_count":1500,"reliability_score":74,"known_issues":"Low 2500Pa suction underpowered for deep cleaning, mop is a disposable wet-wipe drag pad","summary":"An ultra-compact LiDAR mini vacuum with a 70-day auto-empty base and very quiet 48dB operation, ideal for small spaces and light maintenance."},{"brand":"SwitchBot","model":"K10+ Pro","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":3000,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR plus PSD distance sensor for improved detection","notable_app":"SwitchBot","price_street_usd":500,"price_msrp_usd":600,"user_stars":4.1,"review_count":700,"reliability_score":75,"known_issues":"Still relatively low suction for the price, mopping limited to disposable wet-wipe pad","summary":"The upgraded mini with 3000Pa suction, added PSD obstacle sensor and a 90-day auto-empty base, keeping the compact quiet profile at a higher price."},{"brand":"SwitchBot","model":"K20+ Pro","year":2025,"discontinued":false,"nav_type":"LiDAR","suction_pa":4000,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"D-ToF LiDAR plus 3D obstacle detection","notable_app":"SwitchBot","price_street_usd":650,"price_msrp_usd":700,"user_stars":4,"review_count":150,"reliability_score":72,"known_issues":"Mopping only light maintenance (single-pass drag pad), modular accessories cost extra","summary":"A compact multitasking mini vacuum with 4000Pa suction and a modular FusionPlatform that can carry loads, air purifiers or cameras, prioritizing versatility over raw cleaning specs."},{"brand":"yeedi","model":"Cube","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":5100,"mopping_type":"Vibrating flat pad","self_empty":true,"auto_mop_wash":true,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"Laser + visual fusion with IR","notable_app":"yeedi","price_street_usd":330,"price_msrp_usd":700,"user_stars":4.3,"review_count":900,"reliability_score":74,"known_issues":"Occasional mop-wash/dry odor, room-recognition hiccups, no hot-water wash","summary":"A 2023 budget all-in-one with 5100Pa suction, vibrating mop, 8mm mop lift, and a self-wash/self-empty station at a bargain price."},{"brand":"yeedi","model":"M12 Pro+","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":11000,"mopping_type":"Dual spinning pads","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"TrueDetect 3D 3.0 (3D ToF)","notable_app":"yeedi","price_street_usd":360,"price_msrp_usd":800,"user_stars":4.4,"review_count":700,"reliability_score":78,"known_issues":"Below-average deep-carpet cleaning, app stability issues, station lacks plumbed auto refill/drain","summary":"A premium 2024 omni-station model with 11,000Pa suction, dual spinning mops, hot-water wash and ZeroTangle brush, frequently discounted to mid-range prices."},{"brand":"TP-Link Tapo","model":"RV30 Max Plus","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":5300,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR + IMU only; no camera/3D avoidance","notable_app":"Tapo","price_street_usd":250,"price_msrp_usd":300,"user_stars":4.6,"review_count":900,"reliability_score":78,"known_issues":"2.4GHz-only Wi-Fi pairing hassles, drag-pad mopping weak on dried stains, struggles with cords","summary":"Budget LiDAR vacuum-mop with strong 5300Pa suction and a self-empty dock that punches above its sub-$300 price but only offers basic drag-pad mopping."},{"brand":"TP-Link Tapo","model":"RV30 Plus","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":4200,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR + gyro dual navigation; no camera obstacle avoidance","notable_app":"Tapo","price_street_usd":230,"price_msrp_usd":300,"user_stars":4.4,"review_count":300,"reliability_score":76,"known_issues":"Scheduling/algorithm quirks, light-duty mopping, no true obstacle avoidance","summary":"Lower-suction LiDAR sibling of the Max Plus with a self-empty dock and larger battery, aimed at bigger homes on a budget but with only basic mopping."},{"brand":"iLife","model":"V3s Pro","year":2020,"discontinued":false,"nav_type":"Gyroscope","suction_pa":600,"mopping_type":"None","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"Bump sensors only","notable_app":"None (remote only)","price_street_usd":130,"price_msrp_usd":160,"user_stars":4.3,"review_count":60000,"reliability_score":82,"known_issues":"Random bounce navigation misses spots; small bin; no app or mapping; struggles on thick carpet","summary":"A vacuum-only, random-navigation budget workhorse that excels at pet hair on hard floors at a rock-bottom price."},{"brand":"iLife","model":"A11","year":2022,"discontinued":false,"nav_type":"LiDAR","suction_pa":4000,"mopping_type":"Static drag pad","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping only, no dedicated obstacle sensor","notable_app":"iLifeHome","price_street_usd":260,"price_msrp_usd":400,"user_stars":3.9,"review_count":900,"reliability_score":58,"known_issues":"Buggy app, poor multi-floor mapping, main brush motor failures reported, docking misalignment","summary":"A LiDAR vacuum-mop with strong suction hamstrung by unreliable software and reported hardware failures."},{"brand":"3i","model":"S10 Ultra","year":2024,"discontinued":false,"nav_type":"LiDAR + Camera","suction_pa":18000,"mopping_type":"Roller mop","self_empty":true,"auto_mop_wash":true,"hot_water_wash":true,"auto_refill_drain":false,"mop_lift":true,"obstacle_avoidance":"AI camera + 3D obstacle avoidance","notable_app":"3i Life","price_street_usd":700,"price_msrp_usd":1300,"user_stars":4.3,"review_count":700,"reliability_score":74,"known_issues":"New brand with limited long-term track record, novel water-recycling system unproven for durability","summary":"A feature-packed flagship-tier robot with a unique water-recycling dock and extendable roller mop, priced aggressively for a challenger brand."},{"brand":"Airrobo","model":"P20","year":2022,"discontinued":false,"nav_type":"Gyroscope","suction_pa":2800,"mopping_type":"None","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"Infrared/bump sensors","notable_app":"AIRROBO","price_street_usd":120,"price_msrp_usd":200,"user_stars":4.3,"review_count":6000,"reliability_score":80,"known_issues":"Gyro nav can be clunky and occasionally re-cleans or misses areas; no mapping/no-go zones; vacuum-only","summary":"A no-frills gyroscope-navigating vacuum-only unit that delivers strong suction and solid value for first-time buyers."},{"brand":"Ultenic","model":"T10","year":2022,"discontinued":false,"nav_type":"LiDAR","suction_pa":3000,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping, no AI obstacle avoidance","notable_app":"Ultenic","price_street_usd":300,"price_msrp_usd":500,"user_stars":4.2,"review_count":3500,"reliability_score":72,"known_issues":"App crashes and slow reload, poor multi-map storage for split-level homes, mop wets carpets without no-go zones","summary":"An affordable self-emptying LiDAR vac/mop with high-end features undercut by clunky app software."},{"brand":"Ultenic","model":"T20","year":2024,"discontinued":false,"nav_type":"LiDAR","suction_pa":8000,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping, limited obstacle avoidance","notable_app":"Ultenic","price_street_usd":350,"price_msrp_usd":500,"user_stars":4.5,"review_count":1500,"reliability_score":76,"known_issues":"Mop is a simple non-lifting drag pad, needs no-mop zones to avoid wetting carpet, mid-tier app","summary":"A high-suction self-emptying LiDAR robot offering strong value, though its drag-pad mopping remains basic."},{"brand":"Lefant","model":"M1","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":4000,"mopping_type":"Static drag pad","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping only","notable_app":"Lefant","price_street_usd":180,"price_msrp_usd":260,"user_stars":4.2,"review_count":3000,"reliability_score":74,"known_issues":"Mediocre mapping accuracy vs pricier LiDAR units, basic drag-pad mop, no self-empty","summary":"An affordable LiDAR vacuum-mop that cleans well but has mediocre mapping and basic mopping."},{"brand":"Lefant","model":"M210","year":2020,"discontinued":false,"nav_type":"Gyroscope","suction_pa":2200,"mopping_type":"None","self_empty":false,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"Infrared/FreeMove anti-collision sensors","notable_app":"Lefant","price_street_usd":100,"price_msrp_usd":160,"user_stars":4.3,"review_count":30000,"reliability_score":81,"known_issues":"No mapping or no-go zones, random-style navigation misses areas, small 0.5L bin, vacuum-only","summary":"A slim, quiet, random-navigation budget vacuum ideal for hard floors and pet hair on a tight budget."},{"brand":"Proscenic","model":"M8 Pro","year":2021,"discontinued":false,"nav_type":"LiDAR","suction_pa":3000,"mopping_type":"Vibrating flat pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping, no AI obstacle avoidance","notable_app":"ProscenicHome","price_street_usd":400,"price_msrp_usd":500,"user_stars":4.4,"review_count":2000,"reliability_score":73,"known_issues":"Very loud (~80 dB), cleaning performance middling vs peers, app occasionally finicky, no carpet lift","summary":"A LiDAR vac/mop with an auto-empty dock and electric vibrating mop that offers strong features but is noisy and middling at cleaning."},{"brand":"Neakasa","model":"N3","year":2023,"discontinued":false,"nav_type":"LiDAR","suction_pa":4000,"mopping_type":"Static drag pad","self_empty":true,"auto_mop_wash":false,"hot_water_wash":false,"auto_refill_drain":false,"mop_lift":false,"obstacle_avoidance":"LiDAR mapping, no AI obstacle avoidance","notable_app":"Neakasa","price_street_usd":330,"price_msrp_usd":500,"user_stars":4.1,"review_count":1200,"reliability_score":68,"known_issues":"Reported mapping problems and battery inconsistencies, basic electric drag-pad mop, occasional dock faults","summary":"A long-runtime self-emptying LiDAR vac/mop (formerly Neabot) with strong suction but reported mapping and battery reliability quirks."}];
+</script>
+<script>
+/* ============ config ============ */
+const NAV_META={
+  "LiDAR":{c:"good",label:"LiDAR"},
+  "Structured Light 3D":{c:"good",label:"3D Structured Light"},
+  "LiDAR + Camera":{c:"great",label:"LiDAR + Camera"},
+  "ToF":{c:"great",label:"ToF laser"},
+  "Camera (vSLAM)":{c:"warn",label:"Camera (vSLAM)"},
+  "Gyroscope":{c:"neutral",label:"Gyroscope"}
+};
+const NAV_RANK={"LiDAR + Camera":5,"Structured Light 3D":4,"LiDAR":4,"ToF":3,"Camera (vSLAM)":2,"Gyroscope":1};
+const NAV_ORDER=["LiDAR + Camera","LiDAR","Structured Light 3D","ToF","Camera (vSLAM)","Gyroscope"];
+const MOP_ORDER=["None","Static drag pad","Vibrating flat pad","Dual spinning pads","Roller mop","Single spinning pad"];
+const FEATURES=[
+  {k:'has_mop',label:'Mopping',t:d=>d.mopping_type!=='None'},
+  {k:'self_empty',label:'Self-empty dock',t:d=>d.self_empty},
+  {k:'auto_mop_wash',label:'Auto mop wash',t:d=>d.auto_mop_wash},
+  {k:'hot_water_wash',label:'Hot-water wash',t:d=>d.hot_water_wash},
+  {k:'auto_refill_drain',label:'Auto refill / drain',t:d=>d.auto_refill_drain},
+  {k:'mop_lift',label:'Mop lift (carpet)',t:d=>d.mop_lift},
+  {k:'is_lidar',label:'LiDAR / laser nav',t:d=>/LiDAR|Structured Light|ToF/.test(d.nav_type)}
+];
+const FMAP=Object.fromEntries(FEATURES.map(f=>[f.k,f]));
+const money=n=>n==null?"—":"$"+n.toLocaleString();
+const relColor=v=>v>=80?"var(--good)":v>=68?"var(--warn)":"var(--red)";
+const navFill=c=>c==='warn'?'var(--warn)':c==='neutral'?'var(--neutral)':c==='great'?'var(--great)':'var(--good)';
+const tierOf=p=>p<300?"Budget":p<700?"Mid-range":p<1200?"Premium":"Ultra-premium";
+const revFmt=n=>n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,'')+'k':''+n;
+
+/* ============ normalize ============ */
+DATA.forEach((d,i)=>{
+  d._id=i;
+  d._nav=NAV_META[d.nav_type]||{c:'neutral',label:d.nav_type};
+  d._rank=NAV_RANK[d.nav_type]||0;
+  d._tier=tierOf(d.price_street_usd);
+  d._disc=d.price_msrp_usd&&d.price_msrp_usd>d.price_street_usd?Math.round((1-d.price_street_usd/d.price_msrp_usd)*100):0;
+  const feats=FEATURES.filter(f=>f.t(d)).map(f=>f.label).join(' ');
+  d._search=[d.brand,d.model,d.year,d.nav_type,d.mopping_type,d.notable_app,d.obstacle_avoidance,d.summary,
+    d.known_issues,d._tier,'$'+d.price_street_usd,feats,d.suction_pa?d.suction_pa+'pa':'',
+    d.discontinued?'discontinued':'current in production'].join(' ').toLowerCase();
+});
+const BRANDS=(()=>{const m=new Map();DATA.forEach(d=>m.set(d.brand,(m.get(d.brand)||0)+1));
+  return [...m.keys()].sort((a,b)=>m.get(b)-m.get(a)||a.localeCompare(b));})();
+const YEARS=[...new Set(DATA.map(d=>d.year))].sort((a,b)=>b-a).map(String);
+
+const GROUPS=[
+  {id:'feat',title:'Features',type:'feat'},
+  {id:'price',title:'Price',type:'check',field:'_tier',order:['Budget','Mid-range','Premium','Ultra-premium'],
+    sub:{'Budget':'under $300','Mid-range':'$300–699','Premium':'$700–1199','Ultra-premium':'$1200+'}},
+  {id:'nav',title:'Navigation',type:'check',field:'nav_type',order:NAV_ORDER,swatch:true},
+  {id:'mop',title:'Mopping',type:'check',field:'mopping_type',order:MOP_ORDER},
+  {id:'rating',title:'Minimum rating',type:'thresh',field:'user_stars',options:[[0,'Any rating'],[4,'4.0 ★ & up'],[4.3,'4.3 ★ & up'],[4.5,'4.5 ★ & up']]},
+  {id:'rel',title:'Minimum reliability',type:'thresh',field:'reliability_score',options:[[0,'Any'],[70,'70 & up'],[80,'80 & up'],[85,'85 & up']]},
+  {id:'year',title:'Release year',type:'check',field:'year',order:YEARS},
+  {id:'brand',title:'Brand',type:'check',field:'brand',order:BRANDS}
+];
+
+/* ============ state ============ */
+const F={q:'',brand:new Set(),nav:new Set(),mop:new Set(),year:new Set(),price:new Set(),feat:new Set(),
+  rating:0,rel:0,sort:'featured',collapsed:new Set(['year','brand'])};
+
+/* ============ faceted matching + counts ============ */
+function qMatch(d){const t=F.q.split(/\s+/).filter(Boolean);return t.every(x=>d._search.includes(x));}
+function pass(d,except){
+  if(F.q&&!qMatch(d))return false;
+  if(except!=='brand'&&F.brand.size&&!F.brand.has(d.brand))return false;
+  if(except!=='nav'&&F.nav.size&&!F.nav.has(d.nav_type))return false;
+  if(except!=='mop'&&F.mop.size&&!F.mop.has(d.mopping_type))return false;
+  if(except!=='year'&&F.year.size&&!F.year.has(String(d.year)))return false;
+  if(except!=='price'&&F.price.size&&!F.price.has(d._tier))return false;
+  if(except!=='rating'&&F.rating&&d.user_stars<F.rating)return false;
+  if(except!=='rel'&&F.rel&&d.reliability_score<F.rel)return false;
+  for(const fk of F.feat){if(except==='feat:'+fk)continue;if(!FMAP[fk].t(d))return false;}
+  return true;
+}
+function checkCounts(except,field){const m=new Map();DATA.forEach(d=>{if(pass(d,except)){const k=String(d[field]);m.set(k,(m.get(k)||0)+1);}});return m;}
+function featCount(k){let n=0;const f=FMAP[k];DATA.forEach(d=>{if(pass(d,'feat:'+k)&&f.t(d))n++;});return n;}
+function threshCounts(id,field,opts){const base=DATA.filter(d=>pass(d,id));return opts.map(([v])=>base.filter(d=>d[field]>=v).length);}
+const results=()=>DATA.filter(d=>pass(d,null));
+
+/* ============ sort ============ */
+function sortRows(rows){const s=[...rows];const cmp=(a,b,k,dir=1)=>{let x=a[k],y=b[k];if(x==null)x=-Infinity;if(y==null)y=-Infinity;return(x-y)*dir;};
+  switch(F.sort){
+    case'price-asc':s.sort((a,b)=>cmp(a,b,'price_street_usd',1));break;
+    case'price-desc':s.sort((a,b)=>cmp(a,b,'price_street_usd',-1));break;
+    case'stars-desc':s.sort((a,b)=>cmp(a,b,'user_stars',-1)||cmp(a,b,'review_count',-1));break;
+    case'rel-desc':s.sort((a,b)=>cmp(a,b,'reliability_score',-1));break;
+    case'suction-desc':s.sort((a,b)=>cmp(a,b,'suction_pa',-1));break;
+    case'year-desc':s.sort((a,b)=>cmp(a,b,'year',-1)||cmp(a,b,'reliability_score',-1));break;
+    case'brand-asc':s.sort((a,b)=>a.brand.localeCompare(b.brand)||a.model.localeCompare(b.model));break;
+    default:s.sort((a,b)=>cmp(a,b,'reliability_score',-1)||cmp(a,b,'user_stars',-1));
+  }return s;}
+
+/* ============ render: rail ============ */
+const esc=s=>String(s).replace(/"/g,'&quot;');
+function starsHTML(v){return `<span class="stars" title="${v.toFixed(1)} / 5"><span class="u">★★★★★</span><span class="f" style="width:${v/5*100}%">★★★★★</span></span>`;}
+function selCount(g){if(g.id==='feat')return F.feat.size;if(g.type==='thresh')return F[g.id]?1:0;return F[g.id].size;}
+function optRow(gid,val,label,sub,cnt,sel,off,radio,swatch){
+  return `<div class="opt ${radio?'radio':''} ${sel?'sel':''} ${off?'off':''}" data-g="${gid}" data-v="${esc(val)}">
+    <span class="box">${sel?(radio?'●':'✓'):''}</span>
+    <span class="lab">${swatch||''}${label}${sub?`<span class="sub">${sub}</span>`:''}</span>
+    <span class="cnt">${cnt}</span></div>`;
+}
+function renderOpts(g){
+  if(g.type==='feat'){
+    return FEATURES.map(f=>{const c=featCount(f.k);const sel=F.feat.has(f.k);return optRow('feat',f.k,f.label,'',c,sel,c===0&&!sel,false,'');}).join('');
+  }
+  if(g.type==='thresh'){
+    const counts=threshCounts(g.id,g.field,g.options);
+    return g.options.map(([v,l],i)=>{const c=counts[i];const sel=(F[g.id]||0)===v;return optRow(g.id,v,l,'',c,sel,c===0&&!sel,true,'');}).join('');
+  }
+  const m=checkCounts(g.id,g.field);
+  return g.order.filter(v=>m.has(String(v))||F[g.id].has(String(v))).map(v=>{
+    const key=String(v);const c=m.get(key)||0;const sel=F[g.id].has(key);
+    const label=g.id==='nav'?(NAV_META[v]||{}).label||v:v;
+    const sw=g.swatch?`<span class="swatch" style="background:${navFill((NAV_META[v]||{}).c)}"></span>`:'';
+    return optRow(g.id,key,label,g.sub?g.sub[v]:'',c,sel,c===0&&!sel,false,sw);
+  }).join('');
+}
+function renderRail(){
+  const body=document.getElementById('rbody');const sc=body.scrollTop;
+  body.innerHTML=GROUPS.map(g=>{const n=selCount(g);
+    return `<section class="fgroup ${F.collapsed.has(g.id)?'closed':''}">
+      <button class="fgroup-h" data-toggle="${g.id}">${g.title}${n?`<span class="sum">${n} selected</span>`:''}<span class="car">▾</span></button>
+      <div class="fgroup-b">${renderOpts(g)}</div></section>`;}).join('');
+  body.scrollTop=sc;
+}
+
+/* ============ render: active chips + badge ============ */
+function activeList(){
+  const a=[];
+  F.brand.forEach(v=>a.push(['brand',v,v]));
+  F.nav.forEach(v=>a.push(['nav',v,(NAV_META[v]||{}).label||v]));
+  F.mop.forEach(v=>a.push(['mop',v,v==='None'?'No mop':v]));
+  F.price.forEach(v=>a.push(['price',v,v]));
+  F.year.forEach(v=>a.push(['year',v,v]));
+  F.feat.forEach(k=>a.push(['feat',k,FMAP[k].label]));
+  if(F.rating)a.push(['rating',F.rating,F.rating.toFixed(1)+'★ & up']);
+  if(F.rel)a.push(['rel',F.rel,'Reliability '+F.rel+'+']);
+  return a;
+}
+function renderActive(){
+  const list=activeList();const el=document.getElementById('activeChips');
+  el.innerHTML=list.map(([g,v,l])=>`<span class="achip" data-rg="${g}" data-rv="${esc(v)}">${l}<span class="c">×</span></span>`).join('')
+    +(list.length?`<button class="aclear" id="chipClear">Clear all</button>`:'');
+  const badge=document.getElementById('fbadge');
+  if(list.length){badge.style.display='inline-block';badge.textContent=list.length;}else{badge.style.display='none';}
+}
+
+/* ============ render: results ============ */
+function featPills(d){return ['self_empty','auto_mop_wash','hot_water_wash','auto_refill_drain','mop_lift']
+  .map(k=>{const f=FMAP[k];const on=f.t(d);return `<span class="pill ${on?'on':''}">${on?'✓':'·'} ${f.label.replace(' (carpet)','')}</span>`;}).join('');}
+function card(d){
+  const cOn=COMPARE.has(d._id),cFull=COMPARE.size>=CMP_MAX&&!cOn;
+  return `<article class="card ${cOn?'comparing':''}" data-id="${d._id}">
+    <div class="crow1"><div><div class="brand">${d.brand}</div><h3>${d.model}</h3></div>
+      <div class="c1r"><span class="yr">${d.year}</span><button class="cmp-toggle ${cOn?'on':''} ${cFull?'dis':''}" data-cmp="${d._id}">${cOn?'✓ Added':'+ Compare'}</button></div></div>
+    <div class="badges">
+      <span class="b ${d._nav.c}">◎ ${d._nav.label}</span>
+      <span class="b neutral">${d.mopping_type==='None'?'No mop':d.mopping_type}</span>
+    </div>
+    <div class="specs">
+      <span class="pill">${d.suction_pa?d.suction_pa.toLocaleString()+' Pa':'Pa n/a'}</span>
+      <span class="pill">${d._tier}</span>
+      ${d._disc>=15?`<span class="pill on">${d._disc}% off MSRP</span>`:''}
+    </div>
+    <div class="specs">${featPills(d)}</div>
+    <div class="hr"></div>
+    <div class="crow2">
+      <div class="price"><span class="lab">Street price</span><span class="now">${money(d.price_street_usd)}</span>${d.price_msrp_usd>d.price_street_usd?`<span class="was">${money(d.price_msrp_usd)}</span>`:''}</div>
+      <div class="rt">${starsHTML(d.user_stars)}<div class="rc">${d.user_stars.toFixed(1)} · ${revFmt(d.review_count)} reviews</div>
+        <div class="rel"><div class="bar"><i style="width:${d.reliability_score}%;background:${relColor(d.reliability_score)}"></i></div><div class="lab">Reliability ${d.reliability_score}</div></div>
+      </div></div>
+  </article>`;
+}
+function renderResults(){
+  const rows=sortRows(results());
+  document.getElementById('count').textContent=rows.length;
+  const el=document.getElementById('results');
+  el.innerHTML=rows.length?`<div class="grid">${rows.map(card).join('')}</div>`
+    :`<div class="empty"><div class="e">🔍</div><h3>No matches</h3><p>Loosen a filter — every option above shows how many models remain.</p></div>`;
+  const btn=document.getElementById('showResults');if(btn)btn.textContent=`Show ${rows.length} result${rows.length===1?'':'s'}`;
+}
+
+/* ============ update all ============ */
+function update(){renderRail();renderActive();renderResults();}
+
+/* ============ detail sheet ============ */
+function openDetail(d){
+  const yn=b=>b?'<span class="v yes">Yes</span>':'<span class="v no">No</span>';
+  const row=(k,v)=>`<div class="drow"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  document.getElementById('detail').innerHTML=`
+    <div class="grabber"></div>
+    <button class="iconbtn" id="detClose" style="position:absolute;top:14px;right:16px">✕</button>
+    <div class="dhead"><div><div class="dbrand">${d.brand}</div><h2>${d.model}</h2></div>
+      <div class="dprice"><span class="now">${money(d.price_street_usd)}</span>${d.price_msrp_usd>d.price_street_usd?`<span class="was">MSRP ${money(d.price_msrp_usd)}</span>`:''}</div></div>
+    <div class="dstars">${starsHTML(d.user_stars)}<span class="rc">${d.user_stars.toFixed(1)} · ${d.review_count.toLocaleString()} reviews</span></div>
+    <p class="dsum">${d.summary}</p>
+    <div class="dbars">
+      <div class="dbar"><div class="k"><span>Reliability</span><span>${d.reliability_score}/100</span></div><div class="track"><i style="width:${d.reliability_score}%;background:${relColor(d.reliability_score)}"></i></div></div>
+      <div class="dbar"><div class="k"><span>Navigation grade</span><span>${d._nav.label}</span></div><div class="track"><i style="width:${d._rank*20}%;background:${navFill(d._nav.c)}"></i></div></div>
+    </div>
+    <div class="dgrid">
+      ${row('Release year',d.year)}
+      ${row('Navigation',d.nav_type)}
+      ${row('Suction',d.suction_pa?d.suction_pa.toLocaleString()+' Pa':'Not published')}
+      ${row('Mopping',d.mopping_type)}
+      ${row('Obstacle avoidance',d.obstacle_avoidance)}
+      ${row('App / ecosystem',d.notable_app)}
+      <div class="drow"><span class="k">Self-empty dock</span>${yn(d.self_empty)}</div>
+      <div class="drow"><span class="k">Auto mop wash</span>${yn(d.auto_mop_wash)}</div>
+      <div class="drow"><span class="k">Hot-water wash</span>${yn(d.hot_water_wash)}</div>
+      <div class="drow"><span class="k">Auto refill / drain</span>${yn(d.auto_refill_drain)}</div>
+      <div class="drow"><span class="k">Mop lift (carpet)</span>${yn(d.mop_lift)}</div>
+      ${row('Price tier',d._tier)}
+    </div>
+    ${d.known_issues?`<div class="dnote"><b>Known issues — take user feedback with a grain of salt</b>${d.known_issues}</div>`:''}`;
+  document.getElementById('detwrap').classList.add('on');
+  document.getElementById('detClose').onclick=closeDetail;
+}
+function closeDetail(){document.getElementById('detwrap').classList.remove('on');}
+
+/* ============ events ============ */
+const railEl=document.getElementById('rail'),scrimEl=document.getElementById('scrim');
+function openRail(){railEl.classList.add('open');scrimEl.classList.add('on');document.body.style.overflow='hidden';}
+function closeRail(){railEl.classList.remove('open');scrimEl.classList.remove('on');document.body.style.overflow='';}
+document.getElementById('openFilters').onclick=openRail;
+document.getElementById('closeFilters').onclick=closeRail;
+document.getElementById('showResults').onclick=closeRail;
+scrimEl.onclick=closeRail;
+
+document.getElementById('rbody').addEventListener('click',e=>{
+  const tg=e.target.closest('[data-toggle]');
+  if(tg){const id=tg.dataset.toggle;F.collapsed.has(id)?F.collapsed.delete(id):F.collapsed.add(id);renderRail();return;}
+  const opt=e.target.closest('.opt');if(!opt||opt.classList.contains('off'))return;
+  const g=opt.dataset.g,v=opt.dataset.v;
+  if(g==='feat'){F.feat.has(v)?F.feat.delete(v):F.feat.add(v);}
+  else if(g==='rating'||g==='rel'){const nv=Number(v);F[g]=(F[g]===nv?0:nv);}
+  else{F[g].has(v)?F[g].delete(v):F[g].add(v);}
+  update();
+});
+document.getElementById('activeChips').addEventListener('click',e=>{
+  if(e.target.id==='chipClear'){clearAll();return;}
+  const c=e.target.closest('.achip');if(!c)return;
+  const g=c.dataset.rg,v=c.dataset.rv;
+  if(g==='feat')F.feat.delete(v);
+  else if(g==='rating'||g==='rel')F[g]=0;
+  else F[g].delete(v);
+  update();
+});
+function clearAll(){F.brand.clear();F.nav.clear();F.mop.clear();F.year.clear();F.price.clear();F.feat.clear();F.rating=0;F.rel=0;update();}
+document.getElementById('clearAll').onclick=clearAll;
+
+const searchEl=document.getElementById('search'),sbEl=document.getElementById('sb');
+searchEl.addEventListener('input',()=>{F.q=searchEl.value.trim().toLowerCase();sbEl.classList.toggle('on',!!F.q);update();});
+sbEl.querySelector('.x').onclick=()=>{searchEl.value='';F.q='';sbEl.classList.remove('on');update();searchEl.focus();};
+document.getElementById('sort').onchange=e=>{F.sort=e.target.value;renderResults();};
+
+document.getElementById('results').addEventListener('click',e=>{
+  const t=e.target.closest('.cmp-toggle');if(t){if(!t.classList.contains('dis'))toggleCompare(+t.dataset.cmp);return;}
+  const c=e.target.closest('.card');if(c)openDetail(DATA[+c.dataset.id]);});
+document.getElementById('detback').onclick=closeDetail;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDetail();closeRail();closeCompare();}});
+
+document.getElementById('theme').onclick=()=>{const h=document.documentElement;const t=h.getAttribute('data-theme')==='dark'?'light':'dark';h.setAttribute('data-theme',t);try{localStorage.setItem('rv-theme',t);}catch(e){}};
+try{const t=localStorage.getItem('rv-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
+
+/* header height -> desktop sticky offset */
+function setHH(){document.documentElement.style.setProperty('--hh',document.querySelector('.top').offsetHeight+'px');}
+window.addEventListener('resize',setHH);
+
+/* ============ compare ============ */
+const COMPARE=new Set();const CMP_MAX=4;
+const CMP_ROWS=[
+  {label:'Street price',fmt:d=>money(d.price_street_usd),best:'min',num:d=>d.price_street_usd},
+  {label:'User rating',fmt:d=>d.user_stars.toFixed(1)+' \u2605',best:'max',num:d=>d.user_stars},
+  {label:'Reliability',fmt:d=>String(d.reliability_score),best:'max',num:d=>d.reliability_score},
+  {label:'Navigation',fmt:d=>d._nav.label,best:'max',num:d=>d._rank},
+  {label:'Suction',fmt:d=>d.suction_pa?d.suction_pa.toLocaleString()+' Pa':'\u2014',best:'max',num:d=>d.suction_pa||0},
+  {label:'Mopping',fmt:d=>d.mopping_type==='None'?'No mop':d.mopping_type},
+  {label:'Self-empty',bool:'self_empty'},
+  {label:'Auto mop wash',bool:'auto_mop_wash'},
+  {label:'Hot-water wash',bool:'hot_water_wash'},
+  {label:'Auto refill / drain',bool:'auto_refill_drain'},
+  {label:'Mop lift',bool:'mop_lift'},
+  {label:'Obstacle avoid.',fmt:d=>d.obstacle_avoidance},
+  {label:'App / ecosystem',fmt:d=>d.notable_app},
+  {label:'Release year',fmt:d=>String(d.year)}
+];
+function toggleCompare(id){
+  if(COMPARE.has(id))COMPARE.delete(id);else{if(COMPARE.size>=CMP_MAX)return;COMPARE.add(id);}
+  renderResults();renderTray();
+  if(document.getElementById('cmpwrap').classList.contains('on')){if(COMPARE.size)renderCompare();else closeCompare();}
+}
+function renderTray(){
+  const bar=document.getElementById('cmpbar');
+  if(COMPARE.size===0){bar.classList.remove('on');document.body.classList.remove('cmp-open');return;}
+  bar.classList.add('on');document.body.classList.add('cmp-open');
+  const items=[...COMPARE].map(id=>DATA[id]);
+  let h=items.map(d=>`<span class="cmpitem"><span class="m">${d.brand} ${d.model}</span><button class="rm" data-rm="${d._id}">\u2715</button></span>`).join('');
+  for(let i=items.length;i<CMP_MAX;i++)h+=`<span class="cmpitem slot">Slot ${i+1}</span>`;
+  document.getElementById('cmpitems').innerHTML=h;
+  document.getElementById('cmpn').textContent=COMPARE.size;
+  document.getElementById('cmpOpen').disabled=COMPARE.size<2;
+}
+function renderCompare(){
+  const items=[...COMPARE].map(id=>DATA[id]);if(!items.length)return;
+  const head=`<th class="rowlab"></th>`+items.map(d=>`<th class="dev"><div class="dtop"><div><div class="db">${d.brand}</div><div class="dm">${d.model}</div></div><button class="rm" data-rm="${d._id}">\u2715</button></div><div class="dmeta">${money(d.price_street_usd)} \u00b7 ${d.user_stars.toFixed(1)}\u2605 \u00b7 Rel ${d.reliability_score}</div></th>`).join('');
+  const body=CMP_ROWS.map(r=>{
+    let cells;
+    if(r.bool){cells=items.map(d=>`<td>${d[r.bool]?'<span class="yes">\u2713 Yes</span>':'<span class="no">\u2014 No</span>'}</td>`);}
+    else{
+      const vals=items.map(r.num||(()=>null));
+      const nums=vals.filter(v=>v!=null&&isFinite(v));
+      const allEq=vals.every(v=>v===vals[0]);
+      let best=null;
+      if(r.best==='max'&&nums.length)best=Math.max(...nums);
+      if(r.best==='min'&&nums.length)best=Math.min(...nums);
+      cells=items.map((d,i)=>{const isBest=r.best&&!allEq&&nums.length>1&&vals[i]===best;return `<td class="${isBest?'best':''}">${r.fmt(d)}</td>`;});
+    }
+    return `<tr><th class="rowlab">${r.label}</th>${cells.join('')}</tr>`;
+  }).join('');
+  document.getElementById('cmppanel').innerHTML=
+    `<div class="cmphead"><h2>Compare \u00b7 ${items.length} model${items.length>1?'s':''}</h2><button class="iconbtn" id="cmpClose">\u2715</button></div>`+
+    `<div class="cmpscroll"><table class="cmp"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  document.getElementById('cmpClose').onclick=closeCompare;
+}
+function openCompare(){if(COMPARE.size<2)return;renderCompare();document.getElementById('cmpwrap').classList.add('on');document.body.style.overflow='hidden';}
+function closeCompare(){document.getElementById('cmpwrap').classList.remove('on');if(!railEl.classList.contains('open'))document.body.style.overflow='';}
+document.getElementById('cmpClear').onclick=()=>{COMPARE.clear();closeCompare();renderResults();renderTray();};
+document.getElementById('cmpOpen').onclick=openCompare;
+document.getElementById('cmpitems').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(b)toggleCompare(+b.dataset.rm);});
+document.getElementById('cmppanel').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(b)toggleCompare(+b.dataset.rm);});
+document.getElementById('cmpback').onclick=closeCompare;
+
+/* ============ init ============ */
+document.getElementById('total').textContent=DATA.length;
+document.getElementById('foot').innerHTML=
+  `<b>${DATA.length} models · ${BRANDS.length} brands · ${Math.min(...DATA.map(d=>d.year))}\u2013${Math.max(...DATA.map(d=>d.year))} (currently sold).</b> Compiled ${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})} from manufacturer specs and aggregated U.S. retailer reviews. `+
+  `Prices are realistic current <b>street prices</b> (what units actually sell for), not inflated MSRP. Star ratings and reliability scores are approximate — treat them as directional. `+
+  `Navigation is graded on the expert consensus that LiDAR / laser systems outperform camera-only (vSLAM) navigation.`;
+setHH();update();renderTray();
+
+</script>
+</body>
+</html>
