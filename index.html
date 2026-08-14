@@ -93,6 +93,10 @@
 
                 <div class="card p-6">
                     <h2 class="text-xl font-semibold mb-4">Standard Balances</h2>
+                    <div class="grid grid-cols-5 gap-2 pr-11 mb-1 text-xs font-medium" style="color: var(--text-secondary);">
+                        <span class="col-span-3">Amount</span>
+                        <span class="col-span-2">Interest</span>
+                    </div>
                     <div id="standard-balances-container" class="space-y-3"></div>
                     <button id="add-standard-btn" class="w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
                         <i data-lucide="plus-circle" class="w-5 h-5"></i> Add Balance
@@ -100,7 +104,16 @@
                 </div>
 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4">Promotional Balances</h2>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Promotional Balances</h2>
+                        <button id="sort-promos-btn" title="Sort by payoff date" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
+                            <i data-lucide="arrow-down-narrow-wide" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2 pr-11 mb-1 text-xs font-medium" style="color: var(--text-secondary);">
+                        <span class="col-span-3">Amount</span>
+                        <span class="col-span-2">Payoff Date</span>
+                    </div>
                     <div id="promo-balances-container" class="space-y-3"></div>
                     <button id="add-promo-btn" class="w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" style="color: var(--text-secondary);">
                         <i data-lucide="plus-circle" class="w-5 h-5"></i> Add Promo
@@ -327,7 +340,7 @@
                             if (total_bal <= 0.01) break;
 
                             let min_pmt = total_bal * minPaymentRate;
-                            if (total_bal < 35) min_pmt = total_bal;
+                            if (total_bal < 35) min_pmt = total_bal + interest;
                             else if (min_pmt < 35) min_pmt = 35;
 
                             let actual_pmt = Math.max(mid, min_pmt);
@@ -397,14 +410,15 @@
                     let total_bal = balTracker + total_promo;
                     
                     let min_pmt = total_bal * minPaymentRate;
-                    if (total_bal < 35) min_pmt = total_bal;
+                    if (total_bal < 35) min_pmt = total_bal + interest;
                     else if (min_pmt < 35) min_pmt = 35;
 
                     let actual_pmt = Math.max(current_P, min_pmt);
-                    
+
                     let principal = min_pmt - interest;
                     if (principal > total_bal) principal = total_bal;
 
+                    let std_principal = principal <= balTracker ? principal : balTracker;
                     let excess_min = 0;
                     if (principal <= balTracker) {
                         balTracker -= principal;
@@ -455,14 +469,14 @@
                     cumulativeSavings = Math.max(0, cumulativeSavings);
 
                     calculationResultData.push({
-                        Month: currentDate.toLocaleDateString('en-CA'),
+                        Month: currentDate.toISOString().slice(0, 10),
                         Target_Payment: actual_pmt.toFixed(2),
                         Minimum_Payment: min_pmt.toFixed(2),
                         Savings_Contribution: savings_contrib.toFixed(2),
                         Cumulative_Savings: cumulativeSavings.toFixed(2),
                         Ending_Standard_Balance: balTracker.toFixed(2),
                         Interest_Paid: interest.toFixed(2),
-                        Standard_Principal: (principal - excess_min).toFixed(2),
+                        Standard_Principal: std_principal.toFixed(2),
                         Ending_Promo_Balance: ending_promo_bal.toFixed(2),
                         Notes: actionNote
                     });
@@ -494,7 +508,7 @@
 
             const displayResults = (flatPayment, duration) => {
                 docElements.planDuration.textContent = `${duration}-Month Payoff Plan`;
-                docElements.flatPaymentResult.textContent = `$${(new Intl.NumberFormat().format(flatPayment.toFixed(2)))}`;
+                docElements.flatPaymentResult.textContent = `$${flatPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 docElements.resultsTableBody.innerHTML = calculationResultData.map(row => `
                     <tr class="border-b" style="border-color: var(--border);">
                         <td class="p-3">${row.Month}</td>
@@ -524,8 +538,23 @@
                 URL.revokeObjectURL(link.href);
             };
             
+            const sortPromoRows = () => {
+                const rows = Array.from(docElements.promoContainer.querySelectorAll('.dynamic-row'));
+                rows.sort((a, b) => {
+                    const dateA = a.querySelector('[data-field="detail"]').value;
+                    const dateB = b.querySelector('[data-field="detail"]').value;
+                    if (!dateA && !dateB) return 0;
+                    if (!dateA) return 1;
+                    if (!dateB) return -1;
+                    return dateA.localeCompare(dateB);
+                });
+                rows.forEach(row => docElements.promoContainer.appendChild(row));
+                saveData();
+            };
+
             docElements.addStandardBtn.addEventListener('click', () => createRow(docElements.standardContainer, 'standard'));
             docElements.addPromoBtn.addEventListener('click', () => createRow(docElements.promoContainer, 'promo'));
+            document.getElementById('sort-promos-btn').addEventListener('click', sortPromoRows);
             docElements.existingSavings.addEventListener('input', formatNumberInput);
             document.querySelector('main').addEventListener('click', e => {
                 if (e.target.closest('.remove-row-btn')) {
